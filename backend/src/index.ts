@@ -11,12 +11,24 @@ import { adminRouter } from './routes/admin.js';
 
 const app = express();
 
+function isAllowedOrigin(origin?: string): boolean {
+  if (!origin) return true; // same-origin, curl, health checks
+  if (env.frontendOrigins.includes(origin)) return true;
+  try {
+    const { hostname } = new URL(origin);
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+    if (hostname.endsWith('.vercel.app')) return true; // production + preview deploys
+  } catch {
+    /* malformed origin */
+  }
+  return false;
+}
+
 app.use(helmet());
 app.use(
   cors({
     origin(origin, cb) {
-      // allow same-origin / curl (no origin) and configured frontends
-      if (!origin || env.frontendOrigins.includes(origin)) return cb(null, true);
+      if (isAllowedOrigin(origin)) return cb(null, true);
       cb(new Error(`Origin not allowed: ${origin}`));
     },
     credentials: true,

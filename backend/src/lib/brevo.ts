@@ -40,7 +40,13 @@ export async function sendEmail(input: SendEmailInput): Promise<string> {
 
   if (!res.ok) {
     const detail = await res.text();
-    throw new Error(`Brevo send failed (${res.status}): ${detail}`);
+    let hint = '';
+    if (res.status === 400 && /sender|from/i.test(detail)) {
+      hint = ` — the sender "${env.brevoSenderEmail}" must be a verified sender in Brevo (Senders → verify it), and BREVO_SENDER_EMAIL must match it.`;
+    } else if (res.status === 401) {
+      hint = ' — check that BREVO_API_KEY is a valid Brevo API key (xkeysib-…).';
+    }
+    throw new Error(`Email failed (${res.status}): ${detail}${hint}`);
   }
   const json = (await res.json()) as { messageId?: string };
   return json.messageId ?? '';

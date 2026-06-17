@@ -14,7 +14,7 @@ import {
 import { Sidebar, type NavSection } from './Sidebar';
 import { Topbar } from './Topbar';
 import { useAuth } from '@/store/auth';
-import { formatBytes } from '@/lib/utils';
+import { formatBytes, storagePercent } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 export function AppShell() {
@@ -85,7 +85,7 @@ export function AppShell() {
 
   const used = org?.storage_used_bytes ?? 0;
   const quota = org?.storage_quota_bytes ?? 1;
-  const pct = Math.min(100, Math.round((used / quota) * 100));
+  const { value: pctValue, label: pct } = storagePercent(used, quota);
 
   return (
     <div className="flex min-h-screen bg-surface-light-2 dark:bg-surface-dark">
@@ -98,7 +98,7 @@ export function AppShell() {
               <span>{pct}%</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-              <div className="h-full rounded-full bg-gold-sheen" style={{ width: `${pct}%` }} />
+              <div className="h-full rounded-full bg-gold-sheen" style={{ width: `${Math.max(pctValue, used > 0 ? 2 : 0)}%` }} />
             </div>
             <p className="mt-1.5 text-[10px] text-slate-400">
               {formatBytes(used)} of {formatBytes(quota)}

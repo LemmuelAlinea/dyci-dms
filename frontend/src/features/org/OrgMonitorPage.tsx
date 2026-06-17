@@ -6,7 +6,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { FileKindIcon } from '@/components/ui/FileKindIcon';
 import { supabase } from '@/lib/supabase';
-import { formatBytes } from '@/lib/utils';
+import { formatBytes, storagePercent } from '@/lib/utils';
 import { useAuth } from '@/store/auth';
 import type { DocStatus, FileItem } from '@/lib/types';
 
@@ -38,7 +38,7 @@ export function OrgMonitorPage() {
 
   const used = org?.storage_used_bytes ?? 0;
   const quota = org?.storage_quota_bytes ?? 1;
-  const pct = Math.min(100, Math.round((used / quota) * 100));
+  const { value: pctValue, label: pct } = storagePercent(used, quota);
 
   const stats = [
     { label: 'Members', value: data?.memberCount ?? 0, icon: Users, color: 'bg-navy-700 text-gold-300' },
@@ -96,7 +96,7 @@ export function OrgMonitorPage() {
                   <span className="font-semibold text-navy-900 dark:text-white">{pct}%</span>
                 </div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-                  <div className="h-full rounded-full bg-gold-sheen" style={{ width: `${pct}%` }} />
+                  <div className="h-full rounded-full bg-gold-sheen" style={{ width: `${Math.max(pctValue, used > 0 ? 1.5 : 0)}%` }} />
                 </div>
                 <p className="mt-2 text-[11px] text-slate-400">Quota: {formatBytes(quota)}</p>
               </div>

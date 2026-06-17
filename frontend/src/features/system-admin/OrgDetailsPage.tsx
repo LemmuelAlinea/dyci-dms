@@ -23,7 +23,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/drive/Dialogs';
 import { api } from '@/lib/api';
 import { assignOrgAdmin, deleteOrganization, updateOrgQuota } from '@/lib/admin';
-import { formatBytes } from '@/lib/utils';
+import { formatBytes, storagePercent } from '@/lib/utils';
 import { ROLE_LABEL, type DocStatus, type OrgRole } from '@/lib/types';
 
 function health(pct: number) {
@@ -63,7 +63,7 @@ export function OrgDetailsPage() {
   const d = detail.data;
   const used = d.org.storage_used_bytes;
   const quotaBytes = d.org.storage_quota_bytes || 1;
-  const pct = Math.min(100, Math.round((used / quotaBytes) * 100));
+  const { value: pct, label: pctLabel } = storagePercent(used, quotaBytes);
   const h = health(pct);
   const circ = 2 * Math.PI * 42;
 
@@ -112,17 +112,17 @@ export function OrgDetailsPage() {
           <div className="relative my-3 grid place-items-center">
             <svg width="120" height="120" className="-rotate-90">
               <circle cx="60" cy="60" r="42" fill="none" strokeWidth="11" className="stroke-slate-200 dark:stroke-white/10" />
-              <circle cx="60" cy="60" r="42" fill="none" strokeWidth="11" strokeLinecap="round" className={h.ring} stroke="currentColor" strokeDasharray={circ} strokeDashoffset={circ - (pct / 100) * circ} />
+              <circle cx="60" cy="60" r="42" fill="none" strokeWidth="11" strokeLinecap="round" className={h.ring} stroke="currentColor" strokeDasharray={circ} strokeDashoffset={circ - (Math.max(pct, used > 0 ? 1.5 : 0) / 100) * circ} />
             </svg>
             <div className="absolute text-center">
-              <p className="font-display text-2xl font-extrabold text-navy-900 dark:text-white">{pct}%</p>
+              <p className="font-display text-2xl font-extrabold text-navy-900 dark:text-white">{pctLabel}%</p>
               <p className="text-[10px] uppercase tracking-wide text-slate-400">used</p>
             </div>
           </div>
           <span className={`chip ${h.chip}`}>{h.label}</span>
           <div className="mt-4 w-full">
             <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-              <div className={`h-full rounded-full ${h.bar}`} style={{ width: `${pct}%` }} />
+              <div className={`h-full rounded-full ${h.bar}`} style={{ width: `${Math.max(pct, used > 0 ? 1.5 : 0)}%` }} />
             </div>
             <p className="mt-2 text-center text-xs text-slate-400">{formatBytes(used)} of {formatBytes(quotaBytes)}</p>
           </div>

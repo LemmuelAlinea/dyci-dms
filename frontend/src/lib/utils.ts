@@ -5,6 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Storage usage as an accurate percentage. Returns the exact value (for bars/
+ * gauges) and an adaptive label so tiny usage doesn't round to "0%"
+ * (e.g. 0.09%, 2.3%, 45%).
+ */
+export function storagePercent(used: number, quota: number): { value: number; label: string } {
+  const q = quota || 1;
+  const exact = Math.min(100, Math.max(0, (used / q) * 100));
+  const label =
+    exact === 0 ? '0' : exact >= 10 ? String(Math.round(exact)) : exact >= 1 ? exact.toFixed(1) : exact.toFixed(2);
+  return { value: exact, label };
+}
+
 export function formatBytes(bytes: number, decimals = 1): string {
   if (!bytes || bytes <= 0) return '0 B';
   const k = 1024;

@@ -1,0 +1,55 @@
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+export function formatBytes(bytes: number, decimals = 1): string {
+  if (!bytes || bytes <= 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`;
+}
+
+export function initials(name?: string | null): string {
+  if (!name) return '?';
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+const KIND_BY_EXT: Record<string, string> = {
+  pdf: 'pdf',
+  doc: 'docx',
+  docx: 'docx',
+  xls: 'xlsx',
+  xlsx: 'xlsx',
+  csv: 'xlsx',
+  gdoc: 'gdoc',
+  gsheet: 'gsheet',
+};
+
+export function kindFromFile(fileName: string, mime?: string): string {
+  const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+  if (KIND_BY_EXT[ext]) return KIND_BY_EXT[ext];
+  if (mime?.includes('pdf')) return 'pdf';
+  if (mime?.includes('word')) return 'docx';
+  if (mime?.includes('sheet') || mime?.includes('excel')) return 'xlsx';
+  return 'other';
+}
+
+export function slug(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+export function randomId(): string {
+  return crypto.randomUUID();
+}

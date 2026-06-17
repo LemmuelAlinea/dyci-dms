@@ -28,6 +28,7 @@ import { SearchPage } from '@/features/search/SearchPage';
 
 import { AdminDashboard } from '@/features/system-admin/AdminDashboard';
 import { OrganizationsPage } from '@/features/system-admin/OrganizationsPage';
+import { OrgDetailsPage } from '@/features/system-admin/OrgDetailsPage';
 import { AdminActivityPage } from '@/features/system-admin/AdminActivityPage';
 
 const router = createBrowserRouter([
@@ -69,6 +70,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <AdminDashboard /> },
           { path: 'organizations', element: <OrganizationsPage /> },
+          { path: 'organizations/:id', element: <OrgDetailsPage /> },
           { path: 'activity', element: <AdminActivityPage /> },
         ],
       },

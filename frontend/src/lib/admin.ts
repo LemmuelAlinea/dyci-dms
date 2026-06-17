@@ -3,18 +3,46 @@ import type { Organization, Profile } from './types';
 
 export interface OrgWithMeta extends Organization {
   admin?: Profile | null;
+  adminInviteEmail?: string | null; // assigned but not yet registered
   member_count?: number;
 }
 
+interface MemberRow {
+  org_id: string;
+  role: string;
+  profiles?: Profile | null;
+}
+
 export async function listOrganizations(): Promise<OrgWithMeta[]> {
-  const { data: orgs } = await supabase
-    .from('organizations')
-    .select('*, admin:profiles!organizations_admin_id_fkey(*)')
-    .order('created_at', { ascending: false });
-  const { data: members } = await supabase.from('organization_members').select('org_id');
+  // The admin is whoever holds role='admin' in organization_members (the source
+  // of truth) — not just organizations.admin_id, which is only set when the
+  // admin already had an account at assign time.
+  const [{ data: orgs }, { data: members }, { data: invites }] = await Promise.all([
+    supabase.from('organizations').select('*').order('created_at', { ascending: false }),
+    supabase
+      .from('organization_members')
+      .select('org_id, role, profiles:profiles!organization_members_user_id_fkey(*)'),
+    supabase.from('invitations').select('org_id, email').eq('role', 'admin').eq('status', 'pending'),
+  ]);
+
   const counts: Record<string, number> = {};
-  (members ?? []).forEach((m) => (counts[m.org_id] = (counts[m.org_id] ?? 0) + 1));
-  return (orgs ?? []).map((o) => ({ ...(o as OrgWithMeta), member_count: counts[o.id] ?? 0 }));
+  const adminByOrg: Record<string, Profile> = {};
+  ((members ?? []) as unknown as MemberRow[]).forEach((m) => {
+    counts[m.org_id] = (counts[m.org_id] ?? 0) + 1;
+    if (m.role === 'admin' && m.profiles) adminByOrg[m.org_id] = m.profiles;
+  });
+
+  const inviteByOrg: Record<string, string> = {};
+  (invites ?? []).forEach((i) => {
+    if (!inviteByOrg[i.org_id]) inviteByOrg[i.org_id] = i.email;
+  });
+
+  return (orgs ?? []).map((o) => ({
+    ...(o as Organization),
+    member_count: counts[o.id] ?? 0,
+    admin: adminByOrg[o.id] ?? null,
+    adminInviteEmail: adminByOrg[o.id] ? null : inviteByOrg[o.id] ?? null,
+  }));
 }
 
 export async function createOrganization(name: string, code: string): Promise<Organization> {

@@ -69,6 +69,8 @@ export function AdminDashboard() {
                   <span className="flex items-center gap-1.5 text-xs text-slate-500">
                     <Avatar name={o.admin.full_name} url={o.admin.avatar_url} size={22} /> {o.admin.full_name}
                   </span>
+                ) : o.adminInviteEmail ? (
+                  <span className="chip bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">Admin invited</span>
                 ) : (
                   <span className="chip bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">No admin</span>
                 )}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -14,6 +15,7 @@ import { formatBytes } from '@/lib/utils';
 
 export function OrganizationsPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [create, setCreate] = useState(false);
   const [assign, setAssign] = useState<OrgWithMeta | null>(null);
   const [del, setDel] = useState<OrgWithMeta | null>(null);
@@ -41,10 +43,14 @@ export function OrganizationsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.map((o) => (
-            <div key={o.id} className="card p-5">
+            <div
+              key={o.id}
+              onClick={() => navigate(`/admin/organizations/${o.id}`)}
+              className="card cursor-pointer p-5 transition hover:-translate-y-0.5 hover:shadow-navy"
+            >
               <div className="flex items-start justify-between">
                 <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gold-sheen text-sm font-extrabold text-navy-900">{o.code.slice(0, 3)}</span>
-                <button onClick={() => setDel(o)} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10">
+                <button onClick={(e) => { e.stopPropagation(); setDel(o); }} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10">
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -61,6 +67,11 @@ export function OrganizationsPage() {
                       <p className="truncate text-[11px] text-slate-400">{o.admin.email}</p>
                     </div>
                   </div>
+                ) : o.adminInviteEmail ? (
+                  <div className="mt-1.5">
+                    <p className="truncate text-sm font-medium text-navy-900 dark:text-white">{o.adminInviteEmail}</p>
+                    <p className="text-[11px] text-amber-600 dark:text-amber-300">Invited — pending sign-up</p>
+                  </div>
                 ) : (
                   <p className="mt-1.5 text-sm text-amber-600 dark:text-amber-300">Not assigned yet</p>
                 )}
@@ -71,7 +82,7 @@ export function OrganizationsPage() {
                 <span>{formatBytes(o.storage_used_bytes)} used</span>
               </div>
 
-              <button onClick={() => setAssign(o)} className="btn-outline mt-4 w-full">
+              <button onClick={(e) => { e.stopPropagation(); setAssign(o); }} className="btn-outline mt-4 w-full">
                 <UserCog size={16} /> {o.admin ? 'Reassign admin' : 'Assign admin'}
               </button>
             </div>

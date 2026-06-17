@@ -55,4 +55,48 @@ export const api = {
       organizations: Array<{ id: string; name: string; code: string; storage_used_bytes: number; storage_quota_bytes: number; created_at: string }>;
       recentActivity: Array<{ id: string; action: string; entity: string; created_at: string }>;
     }>('/admin/reports'),
+
+  adminActivity: (orgId?: string) =>
+    get<{ events: ActivityEvent[] }>(`/admin/activity${orgId ? `?orgId=${orgId}` : ''}`),
+
+  adminOrgDetail: (id: string) => get<OrgDetail>(`/admin/org/${id}`),
 };
+
+interface MiniProfile {
+  id: string;
+  full_name: string | null;
+  email: string;
+  avatar_url: string | null;
+}
+
+export interface OrgDetail {
+  org: {
+    id: string;
+    name: string;
+    code: string;
+    created_at: string;
+    storage_used_bytes: number;
+    storage_quota_bytes: number;
+  };
+  admin: MiniProfile | null;
+  adminInviteEmail: string | null;
+  members: Array<{ id: string; role: string; joined_at: string; profile: MiniProfile | null }>;
+  memberCount: number;
+  roleBreakdown: Record<string, number>;
+  totalFiles: number;
+  archivedCount: number;
+  trashedCount: number;
+  filesByStatus: Record<string, number>;
+}
+
+export interface ActivityEvent {
+  id: string;
+  type: string;
+  action: string;
+  actor: string | null;
+  target: string | null;
+  org_id: string | null;
+  org_name: string | null;
+  org_code: string | null;
+  at: string;
+}

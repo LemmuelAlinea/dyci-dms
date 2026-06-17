@@ -334,6 +334,12 @@ begin
   where lower(i.email) = lower(new.email) and i.status = 'pending'
   on conflict (org_id, user_id) do nothing;
 
+  -- If an accepted invitation made this user an org admin, record it on the org.
+  update public.organizations o
+  set admin_id = new.id
+  from public.invitations i
+  where i.org_id = o.id and lower(i.email) = lower(new.email) and i.role = 'admin';
+
   update public.invitations
   set status = 'accepted'
   where lower(email) = lower(new.email) and status = 'pending';

@@ -16,10 +16,10 @@ export function AdminDashboard() {
   const totalStorage = (orgs.data ?? []).reduce((s, o) => s + Number(o.storage_used_bytes ?? 0), 0);
 
   const stats = [
-    { label: 'Organizations', value: reports.data?.totals.organizations ?? orgs.data?.length ?? 0, icon: Building2, color: 'bg-navy-700 text-gold-300' },
-    { label: 'Users', value: reports.data?.totals.users ?? '—', icon: Users, color: 'bg-indigo-600 text-white' },
-    { label: 'Documents', value: reports.data?.totals.files ?? '—', icon: FileText, color: 'bg-emerald-600 text-white' },
-    { label: 'Total storage', value: formatBytes(reports.data?.totals.storageBytes ?? totalStorage), icon: HardDrive, color: 'bg-gold-sheen text-navy-900' },
+    { label: 'Organizations', value: reports.data?.totals?.organizations ?? orgs.data?.length ?? 0, icon: Building2, color: 'bg-navy-700 text-gold-300' },
+    { label: 'Users', value: reports.data?.totals?.users ?? '—', icon: Users, color: 'bg-indigo-600 text-white' },
+    { label: 'Documents', value: reports.data?.totals?.files ?? '—', icon: FileText, color: 'bg-emerald-600 text-white' },
+    { label: 'Total storage', value: formatBytes(reports.data?.totals?.storageBytes ?? totalStorage), icon: HardDrive, color: 'bg-gold-sheen text-navy-900' },
   ];
 
   return (

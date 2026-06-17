@@ -8,22 +8,31 @@ async function authHeader(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function request<T>(path: string, init: RequestInit): Promise<T> {
+  if (!BASE) {
+    throw new Error('Backend API is not configured (VITE_API_URL is empty). Set it in your hosting env.');
+  }
+  const res = await fetch(`${BASE}${path}`, init);
+  const contentType = res.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    // Most commonly: VITE_API_URL points at the frontend (SPA), so we got HTML.
+    throw new Error('Backend API is unreachable. Check that VITE_API_URL points to your running backend.');
+  }
+  const json = (await res.json()) as { error?: string };
+  if (!res.ok) throw new Error(json.error ?? `Request failed (${res.status})`);
+  return json as T;
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  return request<T>(path, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...(await authHeader()) },
     body: JSON.stringify(body),
   });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((json as { error?: string }).error ?? `Request failed (${res.status})`);
-  return json as T;
 }
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { headers: { ...(await authHeader()) } });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((json as { error?: string }).error ?? `Request failed (${res.status})`);
-  return json as T;
+  return request<T>(path, { headers: { ...(await authHeader()) } });
 }
 
 export const api = {

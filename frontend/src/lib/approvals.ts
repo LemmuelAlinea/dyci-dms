@@ -65,41 +65,20 @@ export async function createApprovalRequest(
   assignments: { step_no: number; position_id: string | null; assignee_id: string }[],
   message: string,
 ): Promise<void> {
-  // The requester is the current user (RLS requires requester_id = auth.uid()).
-  const me = (await supabase.auth.getUser()).data.user?.id;
-  if (!me) throw new Error('Not signed in');
-  const { data: req, error } = await supabase
-    .from('approval_requests')
-    .insert({
-      org_id: file.org_id,
-      file_id: file.id,
-      document_type_id: file.document_type_id,
-      version_no: file.current_version,
-      requester_id: me,
-      status: 'pending',
-      current_step: 1,
-      message,
-    })
-    .select()
-    .single();
-  if (error) throw error;
-
-  const rows = [...assignments]
-    .sort((a, b) => a.step_no - b.step_no)
-    .map((a) => ({
-      org_id: file.org_id,
-      request_id: req.id,
+  // Create the request + step assignments + set the file pending atomically,
+  // server-side (SECURITY DEFINER), to avoid brittle client-side insert RLS.
+  const { error } = await supabase.rpc('request_approval', {
+    p_file: file.id,
+    p_message: message,
+    p_assignees: assignments.map((a) => ({
       step_no: a.step_no,
       position_id: a.position_id,
       assignee_id: a.assignee_id,
-      status: a.step_no === 1 ? 'pending' : 'waiting',
-    }));
-  const { error: se } = await supabase.from('approval_step_assignments').insert(rows);
-  if (se) throw se;
+    })),
+  });
+  if (error) throw error;
 
-  await supabase.from('files').update({ status: 'pending' }).eq('id', file.id);
-
-  const first = rows.find((r) => r.step_no === 1);
+  const first = assignments.find((a) => a.step_no === 1);
   if (first) {
     await notifyUsers([first.assignee_id], {
       type: 'approval',

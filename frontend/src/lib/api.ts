@@ -84,6 +84,10 @@ export const api = {
   reportOrgReleased: (orgId: string, f: Record<string, string | undefined>) => get<{ rows: ReleasedRow[] }>(`/reports/org/${orgId}/released${qs(f)}`),
   reportOrgByType: (orgId: string, f: Record<string, string | undefined>) => get<ByTypeReport>(`/reports/org/${orgId}/by-type${qs(f)}`),
 
+  reportAdminOverview: () => get<AdminOverview>('/reports/admin/overview'),
+  reportAdminOrganizations: () => get<{ rows: OrgDirRow[] }>('/reports/admin/organizations'),
+  reportAdminStorage: () => get<{ rows: StorageRow[] }>('/reports/admin/storage'),
+
   createOrganization: (input: { name: string; code: string; type: string }) =>
     post<{ organization: unknown }>('/admin/organizations', input),
 };
@@ -160,4 +164,19 @@ export interface ByTypeReport {
   name: string | null;
   fields: ByTypeField[];
   rows: { id: string; reference_no: string | null; status: string; created_at: string; owner_name: string | null; metadata: Record<string, unknown> }[];
+}
+export interface AdminOverview {
+  organizations: number;
+  users: number;
+  documents: number;
+  storageBytes: number;
+  byType: { type: string; count: number; storage: number }[];
+}
+export interface OrgDirRow {
+  id: string; code: string; name: string; type: string; admin_name: string | null;
+  members: number; documents: number; storage_used: number; storage_quota: number; created_at: string;
+}
+export interface StorageRow {
+  id: string; code: string; name: string; type: string;
+  storage_used: number; storage_quota: number; percent: number; health: string;
 }

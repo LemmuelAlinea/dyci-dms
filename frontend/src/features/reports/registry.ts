@@ -53,4 +53,9 @@ export interface AdminReportDef {
   to: string;
 }
 
-export const ADMIN_REPORTS: AdminReportDef[] = [];
+export const ADMIN_REPORTS: AdminReportDef[] = [
+  { key: 'platform-overview', title: 'Platform Overview', description: 'A snapshot of the whole platform.', to: '/admin/reports/overview' },
+  { key: 'organizations-directory', title: 'Organizations Directory', description: 'Every office with admin, members, storage.', to: '/admin/reports/organizations' },
+  { key: 'storage-utilization', title: 'Storage Utilization', description: 'Storage usage per office.', to: '/admin/reports/storage' },
+  { key: 'platform-activity', title: 'Platform Activity Log', description: 'Recent activity across all offices.', to: '/admin/reports/activity' },
+];

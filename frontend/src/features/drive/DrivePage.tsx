@@ -28,13 +28,13 @@ import {
   RequestApprovalDialog,
   ShareDialog,
 } from '@/components/drive/Dialogs';
+import { UploadDocumentDialog } from '@/components/drive/UploadDocumentDialog';
 import {
   listFiles,
   listFolders,
   setFileState,
   setFolderState,
   signedUrlForVersion,
-  uploadFile,
 } from '@/lib/drive';
 import { releaseFile } from '@/lib/approvals';
 import { useAuth } from '@/store/auth';
@@ -51,7 +51,8 @@ export function DrivePage() {
   const current = trail[trail.length - 1];
   const folderId = current.id;
 
-  const [uploading, setUploading] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [dropped, setDropped] = useState<File | null>(null);
   const [newFolder, setNewFolder] = useState(false);
   const [shareFile, setShareFile] = useState<FileItem | null>(null);
   const [approveFile, setApproveFile] = useState<FileItem | null>(null);
@@ -67,21 +68,13 @@ export function DrivePage() {
     qc.invalidateQueries({ queryKey: ['files', ...key] });
   };
 
-  const onDrop = async (accepted: File[]) => {
-    if (!userId || !accepted.length) return;
-    setUploading(true);
-    try {
-      for (const f of accepted) await uploadFile(orgId, userId, folderId, f);
-      toast.success(`Uploaded ${accepted.length} file${accepted.length > 1 ? 's' : ''}`);
-      refresh();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setUploading(false);
-    }
+  const onDrop = (accepted: File[]) => {
+    if (!accepted.length) return;
+    setDropped(accepted[0]);
+    setUploadOpen(true);
   };
 
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     noClick: true,
     accept: {
@@ -195,8 +188,8 @@ export function DrivePage() {
             <button onClick={() => setNewFolder(true)} className="btn-outline">
               <FolderPlus size={17} /> New folder
             </button>
-            <button onClick={open} className="btn-primary" disabled={uploading}>
-              {uploading ? <Spinner className="h-4 w-4" /> : <Upload size={17} />} Upload
+            <button onClick={() => { setDropped(null); setUploadOpen(true); }} className="btn-primary">
+              <Upload size={17} /> Upload
             </button>
           </>
         }
@@ -216,7 +209,7 @@ export function DrivePage() {
           icon="/assets/icon-folder-manila.png"
           title="This folder is empty"
           description="Upload documents or create a folder to get started. You can also drag files anywhere here."
-          action={<button onClick={open} className="btn-primary"><Upload size={17} /> Upload a file</button>}
+          action={<button onClick={() => { setDropped(null); setUploadOpen(true); }} className="btn-primary"><Upload size={17} /> Upload a file</button>}
         />
       ) : (
         <div className="space-y-6">
@@ -259,6 +252,15 @@ export function DrivePage() {
       )}
 
       {/* Dialogs */}
+      <UploadDocumentDialog
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        orgId={orgId}
+        ownerId={userId!}
+        folderId={folderId}
+        initialFile={dropped}
+        onUploaded={() => { setUploadOpen(false); refresh(); }}
+      />
       <NewFolderDialog open={newFolder} onClose={() => setNewFolder(false)} orgId={orgId} parentId={folderId} onCreated={refresh} />
       {shareFile && <ShareDialog open onClose={() => setShareFile(null)} file={shareFile} orgId={orgId} />}
       {approveFile && <RequestApprovalDialog open onClose={() => setApproveFile(null)} file={approveFile} orgId={orgId} onDone={refresh} />}

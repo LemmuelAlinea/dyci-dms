@@ -75,6 +75,10 @@ export interface FileItem {
   released_at: string | null;
   approved_by: string | null;
   description: string | null;
+  document_type_id: string | null;
+  category_id: string | null;
+  reference_no: string | null;
+  metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   owner?: Profile;

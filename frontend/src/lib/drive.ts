@@ -107,11 +107,19 @@ export async function createFolder(orgId: string, ownerId: string, parentId: str
   return data as Folder;
 }
 
+export interface UploadContext {
+  documentTypeId?: string | null;
+  categoryId?: string | null;
+  referenceNo?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
 export async function uploadFile(
   orgId: string,
   ownerId: string,
   folderId: string | null,
   file: File,
+  ctx?: UploadContext,
 ): Promise<FileItem> {
   const fileId = randomId();
   const path = `${orgId}/${ownerId}/${fileId}/v1.${ext(file.name)}`;
@@ -132,6 +140,10 @@ export async function uploadFile(
       size_bytes: file.size,
       current_version: 1,
       status: 'draft',
+      document_type_id: ctx?.documentTypeId ?? null,
+      category_id: ctx?.categoryId ?? null,
+      reference_no: ctx?.referenceNo ?? null,
+      metadata: ctx?.metadata ?? {},
     })
     .select()
     .single();

@@ -17,7 +17,8 @@ import {
 import { supabase } from '@/lib/supabase';
 import { listVersions, setFileState, signedUrlForVersion, uploadNewVersion } from '@/lib/drive';
 import { getDocumentType } from '@/lib/documentTypes';
-import { releaseFile } from '@/lib/approvals';
+import { getLatestRequestForFile, getRequestSteps, releaseFile } from '@/lib/approvals';
+import { ApprovalTracker } from '@/components/drive/ApprovalTracker';
 import { formatBytes } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { Avatar } from '@/components/ui/Avatar';
@@ -57,6 +58,17 @@ export function FileDetailPage() {
     queryKey: ['docType', file?.document_type_id],
     queryFn: () => getDocumentType(file!.document_type_id!),
     enabled: !!file?.document_type_id,
+  });
+
+  const { data: request } = useQuery({
+    queryKey: ['fileRequest', id],
+    queryFn: () => getLatestRequestForFile(id!),
+    enabled: !!id,
+  });
+  const { data: reqSteps } = useQuery({
+    queryKey: ['fileReqSteps', request?.id],
+    queryFn: () => getRequestSteps(request!.id),
+    enabled: !!request?.id,
   });
 
   const refresh = () => {
@@ -135,7 +147,7 @@ export function FileDetailPage() {
                   <Send size={16} /> Request approval
                 </button>
               )}
-              {isOwner && file.status === 'approved' && (
+              {isOwner && file.status === 'approved' && docType?.publishable !== false && (
                 <button
                   onClick={() =>
                     setConfirm({
@@ -206,6 +218,13 @@ export function FileDetailPage() {
               </div>
             )}
           </div>
+
+          {reqSteps && reqSteps.length > 0 && (
+            <div className="card p-5">
+              <h3 className="mb-3 font-display text-sm font-bold text-navy-900 dark:text-white">Approval progress</h3>
+              <ApprovalTracker steps={reqSteps} />
+            </div>
+          )}
 
           {/* Preview */}
           <div className="card overflow-hidden">

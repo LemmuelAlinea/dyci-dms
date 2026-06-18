@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/drive/Dialogs';
 import { assignOrgAdmin, createOrganization, deleteOrganization, listOrganizations, type OrgWithMeta } from '@/lib/admin';
 import { formatBytes } from '@/lib/utils';
+import { ORG_TYPE_LABELS, type OrgType } from '@/lib/types';
 
 export function OrganizationsPage() {
   const qc = useQueryClient();
@@ -110,12 +111,13 @@ export function OrganizationsPage() {
 function CreateDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  const [type, setType] = useState<OrgType>('general');
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     if (!name.trim() || !code.trim()) return toast.error('Name and code are required');
     setBusy(true);
     try {
-      await createOrganization(name.trim(), code.trim());
+      await createOrganization(name.trim(), code.trim(), type);
       toast.success('Organization created');
       onDone();
       onClose();
@@ -136,6 +138,15 @@ function CreateDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
           <label className="label">Code</label>
           <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={8} className="input uppercase" placeholder="SOA" />
           <p className="mt-1 text-[11px] text-slate-400">A short unique code, e.g. SOA, CCS, CBEA.</p>
+        </div>
+        <div>
+          <label className="label">Organization type</label>
+          <select value={type} onChange={(e) => setType(e.target.value as OrgType)} className="input">
+            {(Object.keys(ORG_TYPE_LABELS) as OrgType[]).map((t) => (
+              <option key={t} value={t}>{ORG_TYPE_LABELS[t]}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11px] text-slate-400">Sets the office's starting document types and approval chains.</p>
         </div>
       </div>
     </Modal>

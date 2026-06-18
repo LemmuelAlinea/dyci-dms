@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { Organization, Profile } from './types';
+import { api } from './api';
 
 export interface OrgWithMeta extends Organization {
   admin?: Profile | null;
@@ -45,15 +46,8 @@ export async function listOrganizations(): Promise<OrgWithMeta[]> {
   }));
 }
 
-export async function createOrganization(name: string, code: string): Promise<Organization> {
-  const me = (await supabase.auth.getUser()).data.user?.id;
-  const { data, error } = await supabase
-    .from('organizations')
-    .insert({ name, code: code.toUpperCase(), created_by: me })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as Organization;
+export async function createOrganization(name: string, code: string, type: string): Promise<void> {
+  await api.createOrganization({ name, code, type });
 }
 
 /**

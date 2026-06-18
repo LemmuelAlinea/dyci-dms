@@ -1,3 +1,125 @@
+# Office Org Types — Plan 6: Search & Filter by Metadata Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Turn the global search into a real document finder: search by name/reference and filter by **document type, category, status,** and a selected type's **metadata fields** (e.g. payee, term, leave type).
+
+**Architecture:** A new `searchFiles` query builds a filtered Supabase query over `files` (joined to `document_types`), including JSONB metadata filters (`metadata->>key ilike`). RLS already limits results to what the user may see (own files, released papers, admin, shared, approval participant). The Search page gains a filter bar; when a document type is chosen, its fields render as filter inputs.
+
+**Tech Stack:** React + Vite + TypeScript + Tailwind, TanStack Query, Supabase JS.
+
+**Spec:** `docs/superpowers/specs/2026-06-18-office-org-types-design.md` · **Depends on:** Plans 1–5 (merged). **No SQL required.**
+
+**Testing note:** UI + Supabase queries. Verify with `cd frontend && npx tsc --noEmit` and `npm run build`, plus the manual smoke in Task 3.
+
+---
+
+## File structure (Plan 6)
+
+- `frontend/src/lib/types.ts` — **modify**: add `name` to the `FileItem.document_type` shape.
+- `frontend/src/lib/search.ts` — **create**: `SearchFilters` + `searchFiles`.
+- `frontend/src/features/search/SearchPage.tsx` — **rewrite**: filter bar + metadata filters + results.
+
+---
+
+### Task 1: Search data layer
+
+**Files:**
+- Modify: `frontend/src/lib/types.ts`
+- Create: `frontend/src/lib/search.ts`
+
+- [ ] **Step 1: Add the document type name to FileItem**
+
+In `frontend/src/lib/types.ts`, change the `document_type` line of `FileItem` from:
+
+```ts
+  document_type?: { publishable: boolean } | null;
+```
+
+to:
+
+```ts
+  document_type?: { name?: string; publishable: boolean } | null;
+```
+
+- [ ] **Step 2: Create the search lib**
+
+Create `frontend/src/lib/search.ts`:
+
+```ts
+import { supabase } from './supabase';
+import type { DocStatus, FileItem } from './types';
+
+const OWNER = 'owner:profiles!files_owner_id_fkey(*)';
+
+export interface SearchFilters {
+  term?: string;
+  documentTypeId?: string;
+  categoryId?: string;
+  status?: DocStatus | '';
+  metadata?: Record<string, string>;
+}
+
+function sanitize(term: string): string {
+  // strip characters that break PostgREST's or() filter grammar
+  return term.replace(/[(),]/g, ' ').trim();
+}
+
+/** Filtered file search. RLS limits results to what the caller may see. */
+export async function searchFiles(orgId: string, f: SearchFilters): Promise<FileItem[]> {
+  let q = supabase
+    .from('files')
+    .select(`*, ${OWNER}, document_type:document_types(name, publishable)`)
+    .eq('org_id', orgId)
+    .neq('state', 'trashed');
+
+  if (f.documentTypeId) q = q.eq('document_type_id', f.documentTypeId);
+  if (f.categoryId) q = q.eq('category_id', f.categoryId);
+  if (f.status) q = q.eq('status', f.status);
+
+  const term = f.term ? sanitize(f.term) : '';
+  if (term) q = q.or(`name.ilike.%${term}%,reference_no.ilike.%${term}%`);
+
+  for (const [key, value] of Object.entries(f.metadata ?? {})) {
+    if (value?.trim()) q = q.ilike(`metadata->>${key}`, `%${value.trim()}%`);
+  }
+
+  const { data, error } = await q.order('updated_at', { ascending: false }).limit(80);
+  if (error) throw error;
+  return (data as FileItem[]) ?? [];
+}
+
+export function hasAnyFilter(f: SearchFilters): boolean {
+  return Boolean(
+    f.term?.trim() ||
+      f.documentTypeId ||
+      f.categoryId ||
+      f.status ||
+      Object.values(f.metadata ?? {}).some((v) => v?.trim()),
+  );
+}
+```
+
+- [ ] **Step 3: Type-check + commit**
+
+Run: `cd frontend && npx tsc --noEmit`
+```bash
+git add frontend/src/lib/types.ts frontend/src/lib/search.ts
+git commit -m "feat(search): filtered file search with metadata"
+```
+
+---
+
+### Task 2: Rewrite the Search page
+
+**Files:**
+- Modify (replace whole file): `frontend/src/features/search/SearchPage.tsx`
+
+- [ ] **Step 1: Replace the file contents**
+
+Replace ALL of `frontend/src/features/search/SearchPage.tsx` with:
+
+```tsx
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -142,3 +264,47 @@ export function SearchPage() {
     </div>
   );
 }
+```
+
+- [ ] **Step 2: Type-check + build + commit**
+
+Run: `cd frontend && npx tsc --noEmit && npm run build`
+```bash
+git add frontend/src/features/search/SearchPage.tsx
+git commit -m "feat(search): filter bar + metadata filters + results"
+```
+
+---
+
+### Task 3: Build verification + manual smoke
+
+**Files:** none (verification only)
+
+- [ ] **Step 1: Full build**
+
+Run: `cd frontend && npm run build`
+Expected: succeeds, no TS errors.
+
+- [ ] **Step 2: Manual check (on the running app)**
+
+- Top-bar search → lands on the Search page with the term pre-filled; results show matching files (by name or reference) the user can access.
+- Pick a **Document Type** → its fields appear as filters. Filter, e.g., a College *Grade Sheet* by **Term = 1st Semester**, or a Finance *Voucher* by **Payee** → results narrow.
+- **Status** and **Category** filters narrow results.
+- A staff user only sees their own files + released papers; an admin sees the whole office (RLS-enforced).
+
+---
+
+## Self-review against the spec
+
+**Spec coverage (Plan 6 portion):**
+- Global search across files by name + reference → Tasks 1, 2 ✅
+- Filter by document type, category, status → Tasks 1, 2 ✅
+- Filter by a type's metadata fields (incl. dropdown options) → Tasks 1, 2 ✅
+- Results respect per-user visibility → RLS on `files_select` (no change needed) ✅
+
+**Placeholder scan:** none — all code concrete.
+
+**Type consistency:** `SearchFilters`/`searchFiles`/`hasAnyFilter` defined in `search.ts` and used in `SearchPage`; `FileItem.document_type` extended with optional `name`; `listDocumentTypes` (active types, with `fields`) and `listCategories` reused.
+
+**Deferred (acceptable):** numeric range filters (e.g. "amount over ₱50k") — current metadata filter is contains-match; numeric ranges over JSONB would need a casted column or RPC and can be a later enhancement. This completes the Phase-1 org-types upgrade.
+```

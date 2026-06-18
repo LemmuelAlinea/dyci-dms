@@ -3,6 +3,18 @@ export type DocStatus = 'draft' | 'pending' | 'approved' | 'released' | 'rejecte
 export type NodeState = 'active' | 'archived' | 'trashed';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
+export type OrgType = 'college' | 'registrar' | 'hr' | 'finance' | 'osa' | 'guidance' | 'general';
+
+export const ORG_TYPE_LABELS: Record<OrgType, string> = {
+  college: 'College / Academic Office',
+  registrar: "Registrar's Office",
+  hr: 'HR Office',
+  finance: 'Finance / Accounting Office',
+  osa: 'Office of Student Affairs',
+  guidance: 'Guidance Office',
+  general: 'General Office',
+};
+
 export interface Profile {
   id: string;
   email: string;
@@ -18,6 +30,7 @@ export interface Organization {
   id: string;
   name: string;
   code: string;
+  type: OrgType;
   admin_id: string | null;
   created_by: string | null;
   storage_used_bytes: number;

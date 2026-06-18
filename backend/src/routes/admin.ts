@@ -1,6 +1,9 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { supabaseAdmin } from '../lib/supabaseAdmin.js';
 import { isSystemAdmin, requireAuth, type AuthedRequest } from '../middleware/auth.js';
+import { instantiateTemplate } from '../lib/instantiateTemplate.js';
+import { TEMPLATES } from '../templates/catalog.js';
 
 export const adminRouter = Router();
 
@@ -177,4 +180,29 @@ adminRouter.get('/org/:id', requireAuth, async (req: AuthedRequest, res) => {
     trashedCount,
     filesByStatus,
   });
+});
+
+const createOrgSchema = z.object({
+  name: z.string().min(1).max(120),
+  code: z.string().min(1).max(8),
+  type: z.string().refine((t) => t in TEMPLATES, 'Unknown organization type'),
+});
+
+adminRouter.post('/organizations', requireAuth, async (req: AuthedRequest, res) => {
+  if (!(await isSystemAdmin(req.user!.id))) {
+    return res.status(403).json({ error: 'System admin only' });
+  }
+  const parsed = createOrgSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const { name, code, type } = parsed.data;
+
+  const { data: org, error } = await supabaseAdmin
+    .from('organizations')
+    .insert({ name, code: code.toUpperCase(), type, created_by: req.user!.id })
+    .select()
+    .single();
+  if (error) return res.status(400).json({ error: error.message });
+
+  await instantiateTemplate(org.id, type);
+  return res.json({ organization: org });
 });

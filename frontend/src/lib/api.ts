@@ -69,6 +69,9 @@ export const api = {
     get<{ events: ActivityEvent[] }>(`/admin/activity${orgId ? `?orgId=${orgId}` : ''}`),
 
   adminOrgDetail: (id: string) => get<OrgDetail>(`/admin/org/${id}`),
+
+  createOrganization: (input: { name: string; code: string; type: string }) =>
+    post<{ organization: unknown }>('/organizations', input),
 };
 
 interface MiniProfile {

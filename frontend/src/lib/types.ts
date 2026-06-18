@@ -117,10 +117,40 @@ export interface Approval {
 export interface ApprovalComment {
   id: string;
   approval_id: string;
+  request_id?: string;
   author_id: string;
   body: string;
   created_at: string;
   author?: Profile;
+}
+
+export type StepStatus = 'waiting' | 'pending' | 'approved' | 'rejected';
+
+export interface ApprovalRequest {
+  id: string;
+  org_id: string;
+  file_id: string;
+  document_type_id: string | null;
+  version_no: number;
+  requester_id: string;
+  status: ApprovalStatus;
+  current_step: number;
+  message: string | null;
+  created_at: string;
+  files?: FileItem;
+  requester?: Profile;
+}
+
+export interface ApprovalStep {
+  id: string;
+  request_id: string;
+  step_no: number;
+  position_id: string | null;
+  assignee_id: string | null;
+  status: StepStatus;
+  decided_at: string | null;
+  position?: { name: string } | null;
+  assignee?: Profile | null;
 }
 
 export interface NotificationItem {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Mail, Users } from 'lucide-react';
@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import { Avatar } from '@/components/ui/Avatar';
 import { listMembers, shareFileWithMember } from '@/lib/org';
-import { requestApproval } from '@/lib/approvals';
+import { approverChoices, createApprovalRequest, getApprovalPlan, type PlanStep } from '@/lib/approvals';
 import { notifyUsers } from '@/lib/notify';
 import { api } from '@/lib/api';
 import { createFolder, renameFile } from '@/lib/drive';
@@ -210,17 +210,40 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
 
 export function RequestApprovalDialog({ open, onClose, file, orgId, onDone }: { open: boolean; onClose: () => void; file: FileItem; orgId: string; onDone: () => void }) {
   const userId = useAuth((s) => s.session?.user.id);
-  const [approverId, setApproverId] = useState('');
+  const [picks, setPicks] = useState<Record<number, string>>({});
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
-  const { data: members } = useQuery({ queryKey: ['members', orgId], queryFn: () => listMembers(orgId), enabled: open });
+
+  const planQ = useQuery({ queryKey: ['approvalPlan', file.id], queryFn: () => getApprovalPlan(file), enabled: open });
+  const choicesQ = useQuery({ queryKey: ['approverChoices', orgId], queryFn: () => approverChoices(orgId, userId), enabled: open && (planQ.data?.length ?? 0) === 0 && !planQ.isLoading });
+
+  const plan: PlanStep[] = planQ.data ?? [];
+  const isChain = plan.length > 0;
+
+  // Auto-pick steps whose position has exactly one holder.
+  useEffect(() => {
+    if (!isChain) return;
+    const init: Record<number, string> = {};
+    plan.forEach((s) => { if (s.holders.length === 1) init[s.step_no] = s.holders[0].id; });
+    setPicks(init);
+  }, [planQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async () => {
-    if (!approverId) return toast.error('Choose an approver');
+    let assignments: { step_no: number; position_id: string | null; assignee_id: string }[];
+    if (isChain) {
+      if (plan.some((s) => s.holders.length === 0)) return toast.error('Some steps have no member assigned. Set positions in Positions first.');
+      if (plan.some((s) => !picks[s.step_no])) return toast.error('Pick an approver for each step');
+      assignments = plan.map((s) => ({ step_no: s.step_no, position_id: s.position_id, assignee_id: picks[s.step_no] }));
+    } else {
+      if (!picks[1]) return toast.error('Choose an approver');
+      assignments = [{ step_no: 1, position_id: null, assignee_id: picks[1] }];
+    }
     setBusy(true);
     try {
-      await requestApproval(file, approverId, message);
+      await createApprovalRequest(file, assignments, message);
       toast.success('Approval requested');
+      setPicks({});
+      setMessage('');
       onDone();
       onClose();
     } catch (e) {
@@ -237,20 +260,38 @@ export function RequestApprovalDialog({ open, onClose, file, orgId, onDone }: { 
       title="Request approval"
       footer={<><button className="btn-ghost" onClick={onClose}>Cancel</button><button className="btn-primary" onClick={submit} disabled={busy}>{busy ? <Spinner className="h-4 w-4" /> : 'Send request'}</button></>}
     >
-      <p className="mb-4 text-sm text-slate-500">Send <strong className="text-navy-700 dark:text-white">{file.name}</strong> (v{file.current_version}) to a member for review.</p>
-      <label className="label">Approver</label>
-      <select value={approverId} onChange={(e) => setApproverId(e.target.value)} className="input mb-3">
-        <option value="">Select a member…</option>
-        {(members ?? [])
-          .filter((m) => m.user_id !== userId)
-          .map((m) => (
-            <option key={m.id} value={m.user_id}>
-              {m.profiles?.full_name} · {ROLE_LABEL[m.role]}
-            </option>
+      <p className="mb-4 text-sm text-slate-500">Send <strong className="text-navy-700 dark:text-white">{file.name}</strong> (v{file.current_version}) for review.</p>
+
+      {planQ.isLoading ? (
+        <div className="grid place-items-center py-6"><Spinner /></div>
+      ) : isChain ? (
+        <div className="space-y-3">
+          {plan.map((s) => (
+            <div key={s.step_no}>
+              <label className="label">Step {s.step_no} · {s.position_name}</label>
+              {s.holders.length === 0 ? (
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">No member holds "{s.position_name}". Assign one on the Positions page.</p>
+              ) : (
+                <select value={picks[s.step_no] ?? ''} onChange={(e) => setPicks((p) => ({ ...p, [s.step_no]: e.target.value }))} className="input">
+                  <option value="">Select…</option>
+                  {s.holders.map((h) => (<option key={h.id} value={h.id}>{h.full_name}</option>))}
+                </select>
+              )}
+            </div>
           ))}
-      </select>
-      <label className="label">Note (optional)</label>
-      <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3} className="input resize-none" placeholder="Please review and approve this memo…" />
+        </div>
+      ) : (
+        <div>
+          <label className="label">Approver</label>
+          <select value={picks[1] ?? ''} onChange={(e) => setPicks({ 1: e.target.value })} className="input">
+            <option value="">Select a member…</option>
+            {(choicesQ.data ?? []).map((p) => (<option key={p.id} value={p.id}>{p.full_name}</option>))}
+          </select>
+        </div>
+      )}
+
+      <label className="label mt-3">Note (optional)</label>
+      <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3} className="input resize-none" placeholder="Please review and approve…" />
     </Modal>
   );
 }

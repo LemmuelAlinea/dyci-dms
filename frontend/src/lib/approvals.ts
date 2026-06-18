@@ -65,6 +65,9 @@ export async function createApprovalRequest(
   assignments: { step_no: number; position_id: string | null; assignee_id: string }[],
   message: string,
 ): Promise<void> {
+  // The requester is the current user (RLS requires requester_id = auth.uid()).
+  const me = (await supabase.auth.getUser()).data.user?.id;
+  if (!me) throw new Error('Not signed in');
   const { data: req, error } = await supabase
     .from('approval_requests')
     .insert({
@@ -72,7 +75,7 @@ export async function createApprovalRequest(
       file_id: file.id,
       document_type_id: file.document_type_id,
       version_no: file.current_version,
-      requester_id: file.owner_id,
+      requester_id: me,
       status: 'pending',
       current_step: 1,
       message,

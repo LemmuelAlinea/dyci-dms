@@ -131,7 +131,7 @@ export function LandingPage() {
               <Link to="/register" className="btn-gold text-base">
                 Get started <ArrowRight size={18} />
               </Link>
-              <a href="#features" className="btn-outline border-white/20 text-base text-white hover:bg-white/10">
+              <a href="#features" className="btn-outline border-white/20 !bg-transparent text-base text-white hover:bg-white/10">
                 Explore features
               </a>
             </motion.div>
@@ -263,7 +263,7 @@ export function LandingPage() {
             <Link to="/register" className="btn-gold text-base">
               Create your account <ArrowRight size={18} />
             </Link>
-            <Link to="/login" className="btn-outline border-white/20 text-base text-white hover:bg-white/10">
+            <Link to="/login" className="btn-outline border-white/20 !bg-transparent text-base text-white hover:bg-white/10">
               Sign in
             </Link>
           </div>

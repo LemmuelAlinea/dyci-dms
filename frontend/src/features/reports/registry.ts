@@ -37,6 +37,13 @@ export const ORG_REPORTS: ReportDef[] = [
     to: '/app/reports/my-released',
     roles: ['admin', 'co_admin', 'staff', 'approver'],
   },
+  { key: 'office-summary', title: 'Office Summary', description: 'A snapshot of this office.', to: '/app/reports/office-summary', roles: ['admin'] },
+  { key: 'document-register', title: 'Document Register', description: 'Every document in this office.', to: '/app/reports/document-register', roles: ['admin', 'co_admin'] },
+  { key: 'approval-report', title: 'Approval Report', description: 'Approval activity and turnaround.', to: '/app/reports/approval-report', roles: ['admin', 'co_admin'] },
+  { key: 'released-register', title: 'Released Papers Register', description: 'All released documents.', to: '/app/reports/released-register', roles: ['admin', 'co_admin'] },
+  { key: 'member-activity', title: 'Member Activity', description: 'Per-member uploads, approvals, storage.', to: '/app/reports/member-activity', roles: ['admin'] },
+  { key: 'member-directory', title: 'Member Directory', description: 'People in this office and their positions.', to: '/app/reports/member-directory', roles: ['co_admin'] },
+  { key: 'document-type', title: 'Document-Type Report', description: "A type's records with fields and totals.", to: '/app/reports/document-type', roles: ['admin'] },
 ];
 
 export interface AdminReportDef {

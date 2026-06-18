@@ -20,6 +20,7 @@ export function ReportShell<T>({
   loading,
   presetData,
   onLoadPreset,
+  extra,
 }: {
   reportKey: string;
   title: string;
@@ -32,6 +33,7 @@ export function ReportShell<T>({
   loading: boolean;
   presetData: Record<string, unknown>;
   onLoadPreset: (data: Record<string, unknown>) => void;
+  extra?: ReactNode;
 }) {
   const fullName = useAuth((s) => s.profile?.full_name) ?? 'User';
   const [hidden, setHidden] = useState<Set<string>>(new Set(columns.filter((c) => c.defaultHidden).map((c) => c.key)));
@@ -111,6 +113,7 @@ export function ReportShell<T>({
       ) : (
         <ReportLayout title={title} orgName={orgName} appliedFilters={appliedFilters} generatedBy={fullName}>
           <ReportTable columns={visible} rows={rows} />
+          {extra}
         </ReportLayout>
       )}
     </div>

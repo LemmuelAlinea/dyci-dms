@@ -32,6 +32,13 @@ import { MyDocumentsReport } from '@/features/reports/staff/MyDocumentsReport';
 import { MyApprovalRequestsReport } from '@/features/reports/staff/MyApprovalRequestsReport';
 import { MyApprovalQueueReport } from '@/features/reports/staff/MyApprovalQueueReport';
 import { MyReleasedReport } from '@/features/reports/staff/MyReleasedReport';
+import { OfficeSummaryReport } from '@/features/reports/office/OfficeSummaryReport';
+import { DocumentRegisterReport } from '@/features/reports/office/DocumentRegisterReport';
+import { ApprovalReportPage } from '@/features/reports/office/ApprovalReportPage';
+import { MemberActivityReport } from '@/features/reports/office/MemberActivityReport';
+import { MemberDirectoryReport } from '@/features/reports/office/MemberDirectoryReport';
+import { ReleasedRegisterReport } from '@/features/reports/office/ReleasedRegisterReport';
+import { DocumentTypeReport } from '@/features/reports/office/DocumentTypeReport';
 import { AdminReportsPage } from '@/features/reports/AdminReportsPage';
 
 import { AdminDashboard } from '@/features/system-admin/AdminDashboard';
@@ -72,6 +79,13 @@ const router = createBrowserRouter([
           { path: 'reports/my-approval-requests', element: <MyApprovalRequestsReport /> },
           { path: 'reports/my-approval-queue', element: <MyApprovalQueueReport /> },
           { path: 'reports/my-released', element: <MyReleasedReport /> },
+          { path: 'reports/office-summary', element: <OfficeSummaryReport /> },
+          { path: 'reports/document-register', element: <DocumentRegisterReport /> },
+          { path: 'reports/approval-report', element: <ApprovalReportPage /> },
+          { path: 'reports/released-register', element: <ReleasedRegisterReport /> },
+          { path: 'reports/member-activity', element: <MemberActivityReport /> },
+          { path: 'reports/member-directory', element: <MemberDirectoryReport /> },
+          { path: 'reports/document-type', element: <DocumentTypeReport /> },
         ],
       },
     ],

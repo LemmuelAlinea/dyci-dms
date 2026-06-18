@@ -1,6 +1,7 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import {
   Archive,
+  Briefcase,
   CheckSquare,
   HardDrive,
   Mail,
@@ -77,6 +78,7 @@ export function AppShell() {
     manageItems.push({ to: '/app/members', label: 'Members', icon: Users });
   }
   if (currentRole === 'admin') {
+    manageItems.push({ to: '/app/positions', label: 'Positions', icon: Briefcase });
     manageItems.push({ to: '/app/org', label: 'Organization', icon: Gauge });
   }
   if (manageItems.length) sections.push({ title: 'Manage', items: manageItems });

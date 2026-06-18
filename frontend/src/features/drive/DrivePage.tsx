@@ -104,7 +104,7 @@ export function DrivePage() {
     if (file.status === 'draft' || file.status === 'rejected') {
       items.push({ label: 'Request approval', icon: Send, onClick: () => setApproveFile(file) });
     }
-    if (file.status === 'approved') {
+    if (file.status === 'approved' && file.document_type?.publishable !== false) {
       items.push({
         label: 'Release paper',
         icon: Megaphone,

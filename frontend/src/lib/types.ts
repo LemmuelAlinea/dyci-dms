@@ -83,6 +83,7 @@ export interface FileItem {
   updated_at: string;
   owner?: Profile;
   approver?: Profile;
+  document_type?: { publishable: boolean } | null;
 }
 
 export interface FileVersion {

@@ -30,7 +30,7 @@ export async function listFolders(orgId: string, ownerId: string, parentId: stri
 export async function listFiles(orgId: string, ownerId: string, folderId: string | null): Promise<FileItem[]> {
   let q = supabase
     .from('files')
-    .select(`*, ${OWNER}, ${APPROVER}`)
+    .select(`*, ${OWNER}, ${APPROVER}, document_type:document_types(publishable)`)
     .eq('org_id', orgId)
     .eq('owner_id', ownerId)
     .eq('state', 'active')

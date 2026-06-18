@@ -23,6 +23,7 @@ import { ArchivePage } from '@/features/storage/ArchivePage';
 import { BinPage } from '@/features/storage/BinPage';
 import { MembersPage } from '@/features/org/MembersPage';
 import { PositionsPage } from '@/features/org/PositionsPage';
+import { DocTypeSettingsPage } from '@/features/org/DocTypeSettingsPage';
 import { OrgMonitorPage } from '@/features/org/OrgMonitorPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { SearchPage } from '@/features/search/SearchPage';
@@ -56,6 +57,7 @@ const router = createBrowserRouter([
           { path: 'bin', element: <BinPage /> },
           { path: 'members', element: <MembersPage /> },
           { path: 'positions', element: <PositionsPage /> },
+          { path: 'doc-types', element: <DocTypeSettingsPage /> },
           { path: 'org', element: <OrgMonitorPage /> },
           { path: 'settings', element: <SettingsPage /> },
           { path: 'search', element: <SearchPage /> },

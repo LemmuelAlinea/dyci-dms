@@ -3,6 +3,7 @@ import {
   Archive,
   Briefcase,
   CheckSquare,
+  FileCog,
   HardDrive,
   Mail,
   Settings,
@@ -79,6 +80,7 @@ export function AppShell() {
   }
   if (currentRole === 'admin') {
     manageItems.push({ to: '/app/positions', label: 'Positions', icon: Briefcase });
+    manageItems.push({ to: '/app/doc-types', label: 'Document Types', icon: FileCog });
     manageItems.push({ to: '/app/org', label: 'Organization', icon: Gauge });
   }
   if (manageItems.length) sections.push({ title: 'Manage', items: manageItems });

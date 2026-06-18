@@ -4,6 +4,7 @@ import {
   Briefcase,
   CheckSquare,
   FileCog,
+  FileBarChart2,
   HardDrive,
   Mail,
   Settings,
@@ -63,6 +64,7 @@ export function AppShell() {
         { to: '/app/released', label: 'Released Papers', icon: Megaphone },
         { to: '/app/approvals', label: 'Approvals', icon: CheckSquare },
         { to: '/app/messages', label: 'Messages', icon: Mail },
+        { to: '/app/reports', label: 'Reports', icon: FileBarChart2 },
       ],
     },
     {

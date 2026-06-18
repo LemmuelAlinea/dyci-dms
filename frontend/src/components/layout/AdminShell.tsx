@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { Building2, LayoutDashboard, Activity } from 'lucide-react';
+import { Building2, FileBarChart2, LayoutDashboard, Activity } from 'lucide-react';
 import { Sidebar, type NavSection } from './Sidebar';
 import { Topbar } from './Topbar';
 
@@ -10,6 +10,7 @@ const sections: NavSection[] = [
       { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
       { to: '/admin/organizations', label: 'Organizations', icon: Building2 },
       { to: '/admin/activity', label: 'Activity', icon: Activity },
+      { to: '/admin/reports', label: 'Reports', icon: FileBarChart2 },
     ],
   },
 ];

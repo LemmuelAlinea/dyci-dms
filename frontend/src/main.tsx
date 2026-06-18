@@ -29,6 +29,9 @@ import { SettingsPage } from '@/features/settings/SettingsPage';
 import { SearchPage } from '@/features/search/SearchPage';
 import { ReportsPage } from '@/features/reports/ReportsPage';
 import { MyDocumentsReport } from '@/features/reports/staff/MyDocumentsReport';
+import { MyApprovalRequestsReport } from '@/features/reports/staff/MyApprovalRequestsReport';
+import { MyApprovalQueueReport } from '@/features/reports/staff/MyApprovalQueueReport';
+import { MyReleasedReport } from '@/features/reports/staff/MyReleasedReport';
 import { AdminReportsPage } from '@/features/reports/AdminReportsPage';
 
 import { AdminDashboard } from '@/features/system-admin/AdminDashboard';
@@ -66,6 +69,9 @@ const router = createBrowserRouter([
           { path: 'search', element: <SearchPage /> },
           { path: 'reports', element: <ReportsPage /> },
           { path: 'reports/my-documents', element: <MyDocumentsReport /> },
+          { path: 'reports/my-approval-requests', element: <MyApprovalRequestsReport /> },
+          { path: 'reports/my-approval-queue', element: <MyApprovalQueueReport /> },
+          { path: 'reports/my-released', element: <MyReleasedReport /> },
         ],
       },
     ],

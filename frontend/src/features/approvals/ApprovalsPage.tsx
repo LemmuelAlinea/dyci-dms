@@ -11,15 +11,23 @@ import { Avatar } from '@/components/ui/Avatar';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { FileKindIcon } from '@/components/ui/FileKindIcon';
 import { Modal } from '@/components/ui/Modal';
-import { addComment, decideApproval, listComments, listMyRequests, listToReview } from '@/lib/approvals';
+import { ApprovalTracker } from '@/components/drive/ApprovalTracker';
+import {
+  addRequestComment,
+  decideApprovalStep,
+  getRequestSteps,
+  listMyRequests,
+  listRequestComments,
+  listToReview,
+} from '@/lib/approvals';
 import { signedUrlForVersion } from '@/lib/drive';
 import { useAuth } from '@/store/auth';
-import type { Approval } from '@/lib/types';
+import type { ApprovalRequest } from '@/lib/types';
 
 export function ApprovalsPage() {
   const userId = useAuth((s) => s.session?.user.id)!;
   const [tab, setTab] = useState<'review' | 'requests'>('review');
-  const [active, setActive] = useState<Approval | null>(null);
+  const [active, setActive] = useState<ApprovalRequest | null>(null);
 
   const review = useQuery({ queryKey: ['toReview', userId], queryFn: () => listToReview(userId) });
   const requests = useQuery({ queryKey: ['myRequests', userId], queryFn: () => listMyRequests(userId) });
@@ -27,7 +35,7 @@ export function ApprovalsPage() {
 
   return (
     <div>
-      <PageHeader title="Approvals" subtitle="Review documents and track your approval requests." icon={<CheckSquare size={22} />} />
+      <PageHeader title="Approvals" subtitle="Review documents step by step and track your requests." icon={<CheckSquare size={22} />} />
 
       <div className="mb-5 flex w-full max-w-sm rounded-xl bg-slate-100 p-1 dark:bg-white/5">
         {(['review', 'requests'] as const).map((t) => (
@@ -36,7 +44,7 @@ export function ApprovalsPage() {
             onClick={() => setTab(t)}
             className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${tab === t ? 'bg-white text-navy-900 shadow-sm dark:bg-surface-dark-3 dark:text-white' : 'text-slate-500'}`}
           >
-            {t === 'review' ? `To review${review.data?.filter((a) => a.status === 'pending').length ? ` (${review.data.filter((a) => a.status === 'pending').length})` : ''}` : 'My requests'}
+            {t === 'review' ? `To review${review.data?.length ? ` (${review.data.length})` : ''}` : 'My requests'}
           </button>
         ))}
       </div>
@@ -47,56 +55,59 @@ export function ApprovalsPage() {
         <EmptyState
           icon="/assets/icon-approval-stamp.png"
           title={tab === 'review' ? 'Nothing to review' : 'No requests yet'}
-          description={tab === 'review' ? 'Approval requests sent to you will appear here.' : 'Request approval on a file from your drive to start.'}
+          description={tab === 'review' ? 'Documents waiting for your approval will appear here.' : 'Request approval on a file from your drive to start.'}
         />
       ) : (
         <div className="space-y-3">
-          {list.data.map((a) => (
-            <ApprovalRow key={a.id} approval={a} side={tab} onOpen={() => setActive(a)} />
+          {list.data.map((r) => (
+            <ApprovalRow key={r.id} request={r} side={tab} onOpen={() => setActive(r)} />
           ))}
         </div>
       )}
 
-      {active && <ApprovalDetail approval={active} side={tab} onClose={() => setActive(null)} />}
+      {active && <ApprovalDetail request={active} userId={userId} onClose={() => setActive(null)} />}
     </div>
   );
 }
 
-function ApprovalRow({ approval, side, onOpen }: { approval: Approval; side: 'review' | 'requests'; onOpen: () => void }) {
-  const other = side === 'review' ? approval.requester : approval.approver;
+function ApprovalRow({ request, side, onOpen }: { request: ApprovalRequest; side: 'review' | 'requests'; onOpen: () => void }) {
   return (
     <div onClick={onOpen} className="card flex cursor-pointer items-center gap-4 p-4 transition hover:-translate-y-0.5 hover:shadow-card">
       <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-slate-50 dark:bg-white/5">
-        <FileKindIcon kind={approval.files?.kind ?? 'other'} size={24} />
+        <FileKindIcon kind={request.files?.kind ?? 'other'} size={24} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-navy-900 dark:text-white">{approval.files?.name}</p>
+        <p className="truncate text-sm font-semibold text-navy-900 dark:text-white">
+          {request.files?.name}
+          {request.files?.reference_no && <span className="ml-2 font-mono text-[10px] text-navy-500 dark:text-gold-300">{request.files.reference_no}</span>}
+        </p>
         <p className="text-[11px] text-slate-400">
-          {side === 'review' ? 'from' : 'to'} {other?.full_name} · {formatDistanceToNow(new Date(approval.created_at), { addSuffix: true })}
+          {side === 'review' ? `from ${request.requester?.full_name ?? ''}` : 'your request'} · {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
         </p>
       </div>
-      <StatusBadge status={approval.status === 'pending' ? 'pending' : approval.status === 'approved' ? 'approved' : 'rejected'} />
+      <StatusBadge status={request.status === 'pending' ? 'pending' : request.status === 'approved' ? 'approved' : 'rejected'} />
     </div>
   );
 }
 
-function ApprovalDetail({ approval, side, onClose }: { approval: Approval; side: 'review' | 'requests'; onClose: () => void }) {
+function ApprovalDetail({ request, userId, onClose }: { request: ApprovalRequest; userId: string; onClose: () => void }) {
   const qc = useQueryClient();
-  const userId = useAuth((s) => s.session?.user.id);
+  const navigate = useNavigate();
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
-  const navigate = useNavigate();
-  const { data: comments, refetch } = useQuery({ queryKey: ['comments', approval.id], queryFn: () => listComments(approval.id) });
 
-  const isApprover = approval.approver_id === userId && approval.status === 'pending';
+  const stepsQ = useQuery({ queryKey: ['reqSteps', request.id], queryFn: () => getRequestSteps(request.id) });
+  const commentsQ = useQuery({ queryKey: ['reqComments', request.id], queryFn: () => listRequestComments(request.id) });
+
+  const myStep = stepsQ.data?.find((s) => s.status === 'pending' && s.assignee_id === userId);
 
   const send = async () => {
     if (!body.trim()) return;
     setBusy(true);
     try {
-      await addComment(approval.id, body.trim());
+      await addRequestComment(request.id, body.trim());
       setBody('');
-      refetch();
+      commentsQ.refetch();
     } finally {
       setBusy(false);
     }
@@ -105,7 +116,7 @@ function ApprovalDetail({ approval, side, onClose }: { approval: Approval; side:
   const decide = async (decision: 'approved' | 'rejected') => {
     setBusy(true);
     try {
-      await decideApproval(approval, decision);
+      await decideApprovalStep(request, decision, body.trim() || undefined);
       toast.success(decision === 'approved' ? 'Approved' : 'Rejected');
       qc.invalidateQueries({ queryKey: ['toReview'] });
       qc.invalidateQueries({ queryKey: ['myRequests'] });
@@ -118,34 +129,27 @@ function ApprovalDetail({ approval, side, onClose }: { approval: Approval; side:
   };
 
   return (
-    <Modal open onClose={onClose} title={approval.files?.name} size="lg">
+    <Modal open onClose={onClose} title={request.files?.name} size="lg">
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <StatusBadge status={approval.status === 'pending' ? 'pending' : approval.status === 'approved' ? 'approved' : 'rejected'} />
-          <span>v{approval.version_no}</span>
-        </div>
+        <StatusBadge status={request.status === 'pending' ? 'pending' : request.status === 'approved' ? 'approved' : 'rejected'} />
         <div className="flex gap-2">
-          <button onClick={async () => approval.file_id && window.open(await signedUrlForVersion(approval.file_id, approval.version_no, true), '_blank')} className="btn-outline !py-1.5 !text-xs">
+          <button onClick={async () => window.open(await signedUrlForVersion(request.file_id, request.version_no, true), '_blank')} className="btn-outline !py-1.5 !text-xs">
             <Download size={14} /> Download
           </button>
-          <button onClick={() => navigate(`/app/file/${approval.file_id}`)} className="btn-outline !py-1.5 !text-xs">
-            Open file
-          </button>
+          <button onClick={() => navigate(`/app/file/${request.file_id}`)} className="btn-outline !py-1.5 !text-xs">Open file</button>
         </div>
       </div>
 
-      {approval.message && (
-        <div className="mb-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-white/5 dark:text-slate-300">
-          “{approval.message}”
-        </div>
-      )}
+      <div className="mb-4 rounded-xl bg-slate-50 p-3 dark:bg-white/5">
+        {stepsQ.isLoading ? <Spinner className="h-4 w-4" /> : <ApprovalTracker steps={stepsQ.data ?? []} />}
+      </div>
 
-      <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-400">
-        <MessageSquare size={14} /> Discussion
-      </p>
-      <div className="max-h-60 space-y-3 overflow-y-auto pr-1">
-        {(comments ?? []).length === 0 && <p className="py-4 text-center text-sm text-slate-400">No comments yet.</p>}
-        {(comments ?? []).map((c) => (
+      {request.message && <div className="mb-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-white/5 dark:text-slate-300">"{request.message}"</div>}
+
+      <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-400"><MessageSquare size={14} /> Discussion</p>
+      <div className="max-h-52 space-y-3 overflow-y-auto pr-1">
+        {(commentsQ.data ?? []).length === 0 && <p className="py-4 text-center text-sm text-slate-400">No comments yet.</p>}
+        {(commentsQ.data ?? []).map((c) => (
           <div key={c.id} className="flex gap-2.5">
             <Avatar name={c.author?.full_name} url={c.author?.avatar_url} size={30} />
             <div className="min-w-0 flex-1 rounded-xl bg-slate-50 px-3 py-2 dark:bg-white/5">
@@ -160,26 +164,14 @@ function ApprovalDetail({ approval, side, onClose }: { approval: Approval; side:
       </div>
 
       <div className="mt-4 flex gap-2">
-        <input
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && send()}
-          className="input"
-          placeholder="Add a comment…"
-        />
-        <button onClick={send} disabled={busy} className="btn-primary !px-3">
-          <Send size={16} />
-        </button>
+        <input value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} className="input" placeholder="Add a comment…" />
+        <button onClick={send} disabled={busy} className="btn-primary !px-3"><Send size={16} /></button>
       </div>
 
-      {isApprover && (
+      {myStep && (
         <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4 dark:border-white/10">
-          <button onClick={() => decide('rejected')} disabled={busy} className="btn flex-1 bg-rose-600 text-white hover:bg-rose-500">
-            <X size={16} /> Reject
-          </button>
-          <button onClick={() => decide('approved')} disabled={busy} className="btn-gold flex-1">
-            <Check size={16} /> Approve
-          </button>
+          <button onClick={() => decide('rejected')} disabled={busy} className="btn flex-1 bg-rose-600 text-white hover:bg-rose-500"><X size={16} /> Reject</button>
+          <button onClick={() => decide('approved')} disabled={busy} className="btn-gold flex-1"><Check size={16} /> Approve</button>
         </div>
       )}
     </Modal>

@@ -10,12 +10,15 @@ import {
   Lock,
   Mail,
   Megaphone,
+  Moon,
   Search,
   ShieldCheck,
+  Sun,
   Users,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { Reveal } from '@/components/motion/Reveal';
+import { useTheme } from '@/store/theme';
 
 const FEATURES = [
   { icon: FolderTree, title: 'Drive & folders', desc: 'Nested folders, modern breadcrumbs, and drag-drop uploads for PDF, Word, and Excel files.' },
@@ -41,6 +44,7 @@ const ROLES = [
 
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const { theme, setTheme } = useTheme();
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', onScroll);
@@ -69,6 +73,13 @@ function Navbar() {
           <a href="#roles" className="transition hover:text-white">Roles</a>
         </nav>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="rounded-xl p-2 text-white/80 transition hover:bg-white/10"
+            aria-label="Toggle light or dark mode"
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
           <Link to="/login" className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
             Sign in
           </Link>

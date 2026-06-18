@@ -71,7 +71,7 @@ export const api = {
   adminOrgDetail: (id: string) => get<OrgDetail>(`/admin/org/${id}`),
 
   createOrganization: (input: { name: string; code: string; type: string }) =>
-    post<{ organization: unknown }>('/organizations', input),
+    post<{ organization: unknown }>('/admin/organizations', input),
 };
 
 interface MiniProfile {

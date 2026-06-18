@@ -1,6 +1,6 @@
 import { Router, type Response } from 'express';
 import { supabaseAdmin } from '../lib/supabaseAdmin.js';
-import { requireAuth, roleInOrg, type AuthedRequest } from '../middleware/auth.js';
+import { isSystemAdmin, requireAuth, roleInOrg, type AuthedRequest } from '../middleware/auth.js';
 
 export const reportsRouter = Router();
 
@@ -207,5 +207,75 @@ reportsRouter.get('/org/:orgId/by-type', requireAuth, async (req: AuthedRequest,
     name: dt?.name ?? null,
     fields: dt?.fields ?? [],
     rows: (data ?? []).map((r: any) => ({ id: r.id, reference_no: r.reference_no, status: r.status, created_at: r.created_at, owner_name: fullName(r.owner), metadata: r.metadata ?? {} })),
+  });
+});
+
+// ── Platform Overview (system admin) ─────────────────────────────────────────
+reportsRouter.get('/admin/overview', requireAuth, async (req: AuthedRequest, res) => {
+  if (!(await isSystemAdmin(req.user!.id))) return res.status(403).json({ error: 'System admin only' });
+  const [{ count: orgCount }, { count: userCount }, { count: fileCount }, { data: orgs }] = await Promise.all([
+    supabaseAdmin.from('organizations').select('*', { count: 'exact', head: true }),
+    supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }),
+    supabaseAdmin.from('files').select('*', { count: 'exact', head: true }).neq('state', 'trashed'),
+    supabaseAdmin.from('organizations').select('type, storage_used_bytes'),
+  ]);
+  const byType: Record<string, { count: number; storage: number }> = {};
+  let totalStorage = 0;
+  (orgs ?? []).forEach((o: any) => {
+    const t = o.type ?? 'general';
+    if (!byType[t]) byType[t] = { count: 0, storage: 0 };
+    byType[t].count += 1;
+    byType[t].storage += Number(o.storage_used_bytes ?? 0);
+    totalStorage += Number(o.storage_used_bytes ?? 0);
+  });
+  res.json({
+    organizations: orgCount ?? 0,
+    users: userCount ?? 0,
+    documents: fileCount ?? 0,
+    storageBytes: totalStorage,
+    byType: Object.entries(byType).map(([type, v]) => ({ type, count: v.count, storage: v.storage })),
+  });
+});
+
+// ── Organizations Directory (system admin) ───────────────────────────────────
+reportsRouter.get('/admin/organizations', requireAuth, async (req: AuthedRequest, res) => {
+  if (!(await isSystemAdmin(req.user!.id))) return res.status(403).json({ error: 'System admin only' });
+  const [{ data: orgs }, { data: members }, { data: files }, { data: admins }] = await Promise.all([
+    supabaseAdmin.from('organizations').select('id, code, name, type, storage_used_bytes, storage_quota_bytes, admin_id, created_at').order('created_at', { ascending: false }),
+    supabaseAdmin.from('organization_members').select('org_id'),
+    supabaseAdmin.from('files').select('org_id').neq('state', 'trashed'),
+    supabaseAdmin.from('profiles').select('id, full_name'),
+  ]);
+  const memberCount: Record<string, number> = {};
+  (members ?? []).forEach((m: any) => (memberCount[m.org_id] = (memberCount[m.org_id] ?? 0) + 1));
+  const docCount: Record<string, number> = {};
+  (files ?? []).forEach((f: any) => (docCount[f.org_id] = (docCount[f.org_id] ?? 0) + 1));
+  const adminName = new Map((admins ?? []).map((a: any) => [a.id, a.full_name]));
+  res.json({
+    rows: (orgs ?? []).map((o: any) => ({
+      id: o.id, code: o.code, name: o.name, type: o.type,
+      admin_name: o.admin_id ? adminName.get(o.admin_id) ?? null : null,
+      members: memberCount[o.id] ?? 0, documents: docCount[o.id] ?? 0,
+      storage_used: o.storage_used_bytes, storage_quota: o.storage_quota_bytes, created_at: o.created_at,
+    })),
+  });
+});
+
+// ── Storage Utilization (system admin) ───────────────────────────────────────
+reportsRouter.get('/admin/storage', requireAuth, async (req: AuthedRequest, res) => {
+  if (!(await isSystemAdmin(req.user!.id))) return res.status(403).json({ error: 'System admin only' });
+  const { data: orgs } = await supabaseAdmin
+    .from('organizations')
+    .select('id, code, name, type, storage_used_bytes, storage_quota_bytes')
+    .order('storage_used_bytes', { ascending: false });
+  res.json({
+    rows: (orgs ?? []).map((o: any) => {
+      const pct = o.storage_quota_bytes ? (Number(o.storage_used_bytes) / Number(o.storage_quota_bytes)) * 100 : 0;
+      return {
+        id: o.id, code: o.code, name: o.name, type: o.type,
+        storage_used: o.storage_used_bytes, storage_quota: o.storage_quota_bytes,
+        percent: pct, health: pct < 60 ? 'Healthy' : pct < 85 ? 'Moderate' : 'Critical',
+      };
+    }),
   });
 });

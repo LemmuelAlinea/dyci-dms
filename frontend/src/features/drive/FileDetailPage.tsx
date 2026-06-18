@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { listVersions, setFileState, signedUrlForVersion, uploadNewVersion } from '@/lib/drive';
+import { getDocumentType } from '@/lib/documentTypes';
 import { releaseFile } from '@/lib/approvals';
 import { formatBytes } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
@@ -51,6 +52,12 @@ export function FileDetailPage() {
     },
   });
   const { data: versions } = useQuery({ queryKey: ['versions', id], queryFn: () => listVersions(id!), enabled: !!id });
+
+  const { data: docType } = useQuery({
+    queryKey: ['docType', file?.document_type_id],
+    queryFn: () => getDocumentType(file!.document_type_id!),
+    enabled: !!file?.document_type_id,
+  });
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['file', id] });
@@ -228,6 +235,8 @@ export function FileDetailPage() {
           <div className="card p-5">
             <h3 className="mb-3 font-display text-sm font-bold text-navy-900 dark:text-white">Details</h3>
             <dl className="space-y-3 text-sm">
+              {file.reference_no && <Detail label="Reference"><span className="font-mono text-navy-700 dark:text-gold-200">{file.reference_no}</span></Detail>}
+              {docType && <Detail label="Document type">{docType.name}</Detail>}
               <Detail label="Owner">
                 <span className="flex items-center gap-2">
                   <Avatar name={file.owner?.full_name} url={file.owner?.avatar_url} size={24} />
@@ -248,6 +257,25 @@ export function FileDetailPage() {
               {file.released_at && <Detail label="Released">{format(new Date(file.released_at), 'PP')}</Detail>}
             </dl>
           </div>
+
+          {docType && docType.fields.length > 0 && (
+            <div className="card p-5">
+              <h3 className="mb-3 font-display text-sm font-bold text-navy-900 dark:text-white">Document details</h3>
+              <dl className="space-y-2 text-sm">
+                {docType.fields.map((f) => {
+                  const v = file.metadata?.[f.key];
+                  if (v === undefined || v === '' || v === null) return null;
+                  const display = f.type === 'money' ? `₱${Number(v).toLocaleString()}` : f.type === 'yesno' ? (v ? 'Yes' : 'No') : String(v);
+                  return (
+                    <div key={f.key} className="flex items-center justify-between gap-3">
+                      <dt className="text-slate-400">{f.label}</dt>
+                      <dd className="text-right font-medium text-navy-900 dark:text-white">{display}</dd>
+                    </div>
+                  );
+                })}
+              </dl>
+            </div>
+          )}
 
           <div className="card p-5">
             <h3 className="mb-3 flex items-center gap-2 font-display text-sm font-bold text-navy-900 dark:text-white">

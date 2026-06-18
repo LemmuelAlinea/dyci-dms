@@ -115,6 +115,9 @@ export function FileCard({
         <p className="truncate text-sm font-semibold text-navy-900 dark:text-white" title={file.name}>
           {file.name}
         </p>
+        {file.reference_no && (
+          <p className="mt-0.5 truncate font-mono text-[10px] text-navy-500 dark:text-gold-300">{file.reference_no}</p>
+        )}
         <p className="mt-0.5 text-[11px] text-slate-400">
           v{file.current_version} · {formatBytes(file.size_bytes)} · {formatDistanceToNow(new Date(file.updated_at), { addSuffix: true })}
         </p>

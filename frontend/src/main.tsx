@@ -40,6 +40,10 @@ import { MemberDirectoryReport } from '@/features/reports/office/MemberDirectory
 import { ReleasedRegisterReport } from '@/features/reports/office/ReleasedRegisterReport';
 import { DocumentTypeReport } from '@/features/reports/office/DocumentTypeReport';
 import { AdminReportsPage } from '@/features/reports/AdminReportsPage';
+import { PlatformOverviewReport } from '@/features/reports/admin/PlatformOverviewReport';
+import { OrganizationsDirectoryReport } from '@/features/reports/admin/OrganizationsDirectoryReport';
+import { StorageUtilizationReport } from '@/features/reports/admin/StorageUtilizationReport';
+import { PlatformActivityReport } from '@/features/reports/admin/PlatformActivityReport';
 
 import { AdminDashboard } from '@/features/system-admin/AdminDashboard';
 import { OrganizationsPage } from '@/features/system-admin/OrganizationsPage';
@@ -102,6 +106,10 @@ const router = createBrowserRouter([
           { path: 'organizations/:id', element: <OrgDetailsPage /> },
           { path: 'activity', element: <AdminActivityPage /> },
           { path: 'reports', element: <AdminReportsPage /> },
+          { path: 'reports/overview', element: <PlatformOverviewReport /> },
+          { path: 'reports/organizations', element: <OrganizationsDirectoryReport /> },
+          { path: 'reports/storage', element: <StorageUtilizationReport /> },
+          { path: 'reports/activity', element: <PlatformActivityReport /> },
         ],
       },
     ],

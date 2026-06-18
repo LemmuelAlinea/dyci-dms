@@ -27,6 +27,9 @@ import { DocTypeSettingsPage } from '@/features/org/DocTypeSettingsPage';
 import { OrgMonitorPage } from '@/features/org/OrgMonitorPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { SearchPage } from '@/features/search/SearchPage';
+import { ReportsPage } from '@/features/reports/ReportsPage';
+import { MyDocumentsReport } from '@/features/reports/staff/MyDocumentsReport';
+import { AdminReportsPage } from '@/features/reports/AdminReportsPage';
 
 import { AdminDashboard } from '@/features/system-admin/AdminDashboard';
 import { OrganizationsPage } from '@/features/system-admin/OrganizationsPage';
@@ -61,6 +64,8 @@ const router = createBrowserRouter([
           { path: 'org', element: <OrgMonitorPage /> },
           { path: 'settings', element: <SettingsPage /> },
           { path: 'search', element: <SearchPage /> },
+          { path: 'reports', element: <ReportsPage /> },
+          { path: 'reports/my-documents', element: <MyDocumentsReport /> },
         ],
       },
     ],
@@ -76,6 +81,7 @@ const router = createBrowserRouter([
           { path: 'organizations', element: <OrganizationsPage /> },
           { path: 'organizations/:id', element: <OrgDetailsPage /> },
           { path: 'activity', element: <AdminActivityPage /> },
+          { path: 'reports', element: <AdminReportsPage /> },
         ],
       },
     ],

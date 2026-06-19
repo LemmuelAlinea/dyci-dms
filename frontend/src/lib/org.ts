@@ -23,11 +23,17 @@ export async function removeMember(membershipId: string) {
   if (error) throw error;
 }
 
+export interface ShareOptions {
+  access: 'view' | 'edit';
+  canDownload: boolean;
+  canReshare: boolean;
+}
+
 export async function shareFileWithMember(
   orgId: string,
   fileId: string,
   targetUserId: string,
-  permission: 'view' | 'download',
+  opts: ShareOptions,
 ) {
   const { error } = await supabase.from('shares').insert({
     org_id: orgId,
@@ -35,7 +41,9 @@ export async function shareFileWithMember(
     target_id: fileId,
     shared_by: (await supabase.auth.getUser()).data.user?.id,
     shared_with_user_id: targetUserId,
-    permission,
+    permission: opts.access,
+    can_download: opts.canDownload,
+    can_reshare: opts.canReshare,
   });
   if (error) throw error;
 }

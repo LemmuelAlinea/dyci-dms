@@ -15,6 +15,8 @@ export function FilePreview({ file, canDownload = true }: { file: FileItem; canD
 
   useEffect(() => {
     let active = true;
+    setUrl(null);
+    setText(null);
     if (category === 'pdf' || category === 'image' || category === 'text') {
       setLoading(true);
       signedUrlForVersion(file.id, file.current_version)
@@ -27,7 +29,7 @@ export function FilePreview({ file, canDownload = true }: { file: FileItem; canD
             if (active) setText(body.slice(0, 100_000));
           }
         })
-        .catch((e) => toast.error((e as Error).message))
+        .catch((e) => { if (active) toast.error((e as Error).message); })
         .finally(() => { if (active) setLoading(false); });
     }
     return () => { active = false; };
@@ -72,6 +74,7 @@ export function FilePreview({ file, canDownload = true }: { file: FileItem; canD
 }
 
 function CsvTable({ text }: { text: string }) {
+  // Naive split — does not handle RFC 4180 quoted fields. Acceptable for a read-only preview.
   const rows = text.split(/\r?\n/).filter((r) => r.length).slice(0, 200).map((r) => r.split(','));
   return (
     <div className="max-h-[560px] overflow-auto p-2">

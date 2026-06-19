@@ -87,6 +87,7 @@ export function previewCategory(fileName: string, kind: string): PreviewCategory
   if (kind === 'pdf' || ext === 'pdf') return 'pdf';
   if (IMAGE_EXT.includes(ext)) return 'image';
   if (TEXT_EXT.includes(ext)) return 'text';
+  // 'office' has no inline renderer yet (FilePreview shows the download fallback); OnlyOffice viewer added later.
   if (kind === 'docx' || kind === 'xlsx' || kind === 'pptx') return 'office';
   return 'none';
 }

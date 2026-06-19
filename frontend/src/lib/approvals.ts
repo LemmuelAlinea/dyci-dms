@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { notifyUsers } from './notify';
 import { listMembers } from './org';
-import type { ApprovalComment, ApprovalRequest, ApprovalStep, FileItem, Profile } from './types';
+import type { ApprovalComment, ApprovalRequest, ApprovalStep, ApproverOffice, FileItem, Profile } from './types';
 
 const FILES = 'files(*)';
 const REQ = 'requester:profiles!approval_requests_requester_id_fkey(*)';
@@ -87,6 +87,20 @@ export async function createApprovalRequest(
       link: '/app/approvals',
     });
   }
+}
+
+export async function listApproverOffices(excludeOrgId: string): Promise<ApproverOffice[]> {
+  const { data, error } = await supabase.rpc('list_approver_offices', { p_exclude_org: excludeOrgId });
+  if (error) throw error;
+  return (data as ApproverOffice[]) ?? [];
+}
+
+export async function createCrossOfficeRequest(file: FileItem, targetOrgId: string, message: string): Promise<void> {
+  // approver assignments + notifications are created server-side by the RPC
+  const { error } = await supabase.rpc('request_cross_office_approval', {
+    p_file: file.id, p_message: message, p_target_org: targetOrgId,
+  });
+  if (error) throw error;
 }
 
 /** Requests where the current user is the assignee of the active (pending) step. */

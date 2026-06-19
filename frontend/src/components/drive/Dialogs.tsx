@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import { Avatar } from '@/components/ui/Avatar';
 import { listMembers, shareFileWithMember } from '@/lib/org';
-import { approverChoices, createApprovalRequest, getApprovalPlan, type PlanStep } from '@/lib/approvals';
+import { approverChoices, createApprovalRequest, createCrossOfficeRequest, getApprovalPlan, listApproverOffices, type PlanStep } from '@/lib/approvals';
 import { notifyUsers } from '@/lib/notify';
 import { api } from '@/lib/api';
 import { createFolder, renameFile } from '@/lib/drive';
@@ -235,9 +235,12 @@ export function RequestApprovalDialog({ open, onClose, file, orgId, onDone }: { 
   const [picks, setPicks] = useState<Record<number, string>>({});
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<'office' | 'cross'>('office');
+  const [targetOrg, setTargetOrg] = useState('');
 
-  const planQ = useQuery({ queryKey: ['approvalPlan', file.id], queryFn: () => getApprovalPlan(file), enabled: open });
-  const choicesQ = useQuery({ queryKey: ['approverChoices', orgId], queryFn: () => approverChoices(orgId, userId), enabled: open && (planQ.data?.length ?? 0) === 0 && !planQ.isLoading });
+  const officesQ = useQuery({ queryKey: ['approverOffices', orgId], queryFn: () => listApproverOffices(orgId), enabled: open && mode === 'cross' });
+  const planQ = useQuery({ queryKey: ['approvalPlan', file.id], queryFn: () => getApprovalPlan(file), enabled: open && mode === 'office' });
+  const choicesQ = useQuery({ queryKey: ['approverChoices', orgId], queryFn: () => approverChoices(orgId, userId), enabled: open && mode === 'office' && (planQ.data?.length ?? 0) === 0 && !planQ.isLoading });
 
   const plan: PlanStep[] = planQ.data ?? [];
   const isChain = plan.length > 0;
@@ -251,6 +254,23 @@ export function RequestApprovalDialog({ open, onClose, file, orgId, onDone }: { 
   }, [planQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async () => {
+    if (mode === 'cross') {
+      if (!targetOrg) return toast.error('Select an office');
+      setBusy(true);
+      try {
+        await createCrossOfficeRequest(file, targetOrg, message);
+        toast.success('Approval requested');
+        setTargetOrg('');
+        setMessage('');
+        onDone();
+        onClose();
+      } catch (e) {
+        toast.error((e as Error).message);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     let assignments: { step_no: number; position_id: string | null; assignee_id: string }[];
     if (isChain) {
       if (plan.some((s) => s.holders.length === 0)) return toast.error('Some steps have no member assigned. Set positions in Positions first.');
@@ -284,7 +304,22 @@ export function RequestApprovalDialog({ open, onClose, file, orgId, onDone }: { 
     >
       <p className="mb-4 text-sm text-slate-500">Send <strong className="text-navy-700 dark:text-white">{file.name}</strong> (v{file.current_version}) for review.</p>
 
-      {planQ.isLoading ? (
+      <div className="mb-4 flex gap-2">
+        <button type="button" onClick={() => setMode('office')} className={mode === 'office' ? 'btn-primary flex-1' : 'btn-outline flex-1'}>My office</button>
+        <button type="button" onClick={() => setMode('cross')} className={mode === 'cross' ? 'btn-primary flex-1' : 'btn-outline flex-1'}>Another office</button>
+      </div>
+
+      {mode === 'cross' ? (
+        <div>
+          <label className="label">Office</label>
+          <select value={targetOrg} onChange={(e) => setTargetOrg(e.target.value)} className="input">
+            <option value="">Select an office…</option>
+            {(officesQ.data ?? []).map((o) => (
+              <option key={o.id} value={o.id} disabled={!o.has_approver}>{o.name} ({o.code}){o.has_approver ? '' : ' — no approver'}</option>
+            ))}
+          </select>
+        </div>
+      ) : planQ.isLoading ? (
         <div className="grid place-items-center py-6"><Spinner /></div>
       ) : isChain ? (
         <div className="space-y-3">

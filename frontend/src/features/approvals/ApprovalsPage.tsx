@@ -121,7 +121,7 @@ function ApprovalRow({ request, side, onOpen }: { request: ApprovalRequest; side
           {request.files?.reference_no && <span className="ml-2 font-mono text-[10px] text-navy-500 dark:text-gold-300">{request.files.reference_no}</span>}
         </p>
         <p className="text-[11px] text-slate-400">
-          {side === 'review' ? `from ${request.requester?.full_name ?? ''}` : 'your request'} · {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
+          {side === 'review' ? `from ${request.requester?.full_name ?? ''}` : 'your request'} · {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}{request.target_org_id ? ' · Cross-office' : ''}
         </p>
       </div>
       <StatusBadge status={request.status === 'pending' ? 'pending' : request.status === 'approved' ? 'approved' : 'rejected'} />
@@ -174,9 +174,11 @@ function ApprovalDetail({ request, userId, onClose }: { request: ApprovalRequest
       <div className="mb-4 flex items-center justify-between">
         <StatusBadge status={request.status === 'pending' ? 'pending' : request.status === 'approved' ? 'approved' : 'rejected'} />
         <div className="flex gap-2">
-          <button onClick={async () => window.open(await signedUrlForVersion(request.file_id, request.version_no, true), '_blank')} className="btn-outline !py-1.5 !text-xs">
-            <Download size={14} /> Download
-          </button>
+          {!(request.target_org_id && request.requester_id !== userId) && (
+            <button onClick={async () => window.open(await signedUrlForVersion(request.file_id, request.version_no, true), '_blank')} className="btn-outline !py-1.5 !text-xs">
+              <Download size={14} /> Download
+            </button>
+          )}
           <button onClick={() => navigate(`/app/file/${request.file_id}`)} className="btn-outline !py-1.5 !text-xs">Open file</button>
         </div>
       </div>

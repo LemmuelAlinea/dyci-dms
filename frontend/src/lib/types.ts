@@ -125,7 +125,7 @@ export interface ApprovalComment {
   author?: Profile;
 }
 
-export type StepStatus = 'waiting' | 'pending' | 'approved' | 'rejected';
+export type StepStatus = 'waiting' | 'pending' | 'approved' | 'rejected' | 'skipped';
 
 export interface ApprovalRequest {
   id: string;
@@ -138,9 +138,12 @@ export interface ApprovalRequest {
   current_step: number;
   message: string | null;
   created_at: string;
+  target_org_id: string | null;
   files?: FileItem;
   requester?: Profile;
 }
+
+export interface ApproverOffice { id: string; code: string; name: string; has_approver: boolean }
 
 export interface ApprovalStep {
   id: string;

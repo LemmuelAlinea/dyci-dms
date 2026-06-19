@@ -126,6 +126,9 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
       });
       toast.success(`Shared with ${selected.size} member${selected.size > 1 ? 's' : ''}`);
       setSelected(new Set());
+      setAccess('view');
+      setCanDownload(true);
+      setCanReshare(false);
       onClose();
     } catch (e) {
       toast.error((e as Error).message);
@@ -201,8 +204,8 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
                       type="button"
                       disabled={!editable}
                       onClick={() => setAccess('edit')}
-                      title={editable ? '' : 'Editing is available for Word, Excel and PowerPoint files only'}
-                      className={`flex-1 ${access === 'edit' ? 'btn-primary' : 'btn-outline'} disabled:cursor-not-allowed disabled:opacity-50`}
+                      title={!editable ? 'Editing is available for Word, Excel and PowerPoint files only' : undefined}
+                      className={`${access === 'edit' ? 'btn-primary' : 'btn-outline'} flex-1 disabled:cursor-not-allowed disabled:opacity-50`}
                     >
                       Can edit
                     </button>
@@ -213,11 +216,11 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
                 </div>
 
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={canDownload} onChange={(e) => setCanDownload(e.target.checked)} />
+                  <input type="checkbox" checked={canDownload} onChange={(e) => setCanDownload(e.target.checked)} className="h-4 w-4 accent-navy-700" />
                   Allow download
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={canReshare} onChange={(e) => setCanReshare(e.target.checked)} />
+                  <input type="checkbox" checked={canReshare} onChange={(e) => setCanReshare(e.target.checked)} className="h-4 w-4 accent-navy-700" />
                   Allow re-sharing with other members
                 </label>
               </div>

@@ -15,7 +15,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { listVersions, setFileState, signedUrlForVersion, uploadNewVersion } from '@/lib/drive';
+import { listVersions, myShareForFile, setFileState, signedUrlForVersion, uploadNewVersion } from '@/lib/drive';
+import { api } from '@/lib/api';
 import { getDocumentType } from '@/lib/documentTypes';
 import { getLatestRequestForFile, getRequestSteps, releaseFile } from '@/lib/approvals';
 import { ApprovalTracker } from '@/components/drive/ApprovalTracker';
@@ -71,6 +72,13 @@ export function FileDetailPage() {
     enabled: !!request?.id,
   });
 
+  const isFileOwner = !!file && !!userId && file.owner_id === userId;
+  const { data: myShare } = useQuery({
+    queryKey: ['myShare', id, userId],
+    queryFn: () => myShareForFile(id!, userId!),
+    enabled: !!id && !!userId && !isFileOwner,
+  });
+
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['file', id] });
     qc.invalidateQueries({ queryKey: ['versions', id] });
@@ -81,7 +89,11 @@ export function FileDetailPage() {
     if (!f || !file) return;
     setBusy(true);
     try {
-      await uploadNewVersion(file, f);
+      if (isFileOwner) {
+        await uploadNewVersion(file, f);
+      } else {
+        await api.uploadVersion(file.id, f);
+      }
       toast.success('New version uploaded');
       refresh();
     } catch (err) {
@@ -97,6 +109,9 @@ export function FileDetailPage() {
   }
 
   const isOwner = file.owner_id === userId;
+  const perm = isOwner ? 'owner' : (myShare?.permission ?? null);
+  const canDownload = isOwner || perm === 'download' || perm === 'edit';
+  const canUpload = (isOwner || perm === 'edit') && (file.status === 'draft' || file.status === 'rejected');
 
   return (
     <div>
@@ -126,9 +141,11 @@ export function FileDetailPage() {
 
             {/* Actions */}
             <div className="mt-5 flex flex-wrap gap-2">
-              <button onClick={async () => window.open(await signedUrlForVersion(file.id, file.current_version, true), '_blank')} className="btn-outline">
-                <Download size={16} /> Download
-              </button>
+              {canDownload && (
+                <button onClick={async () => window.open(await signedUrlForVersion(file.id, file.current_version, true), '_blank')} className="btn-outline">
+                  <Download size={16} /> Download
+                </button>
+              )}
               <button onClick={() => setShare(true)} className="btn-outline">
                 <Share2 size={16} /> Share / Send
               </button>
@@ -156,7 +173,7 @@ export function FileDetailPage() {
                   <Megaphone size={16} /> Release paper
                 </button>
               )}
-              {isOwner && (
+              {canUpload && (
                 <>
                   <input ref={fileInput} type="file" hidden onChange={onNewVersion} />
                   <button onClick={() => fileInput.current?.click()} className="btn-outline" disabled={busy}>
@@ -221,7 +238,7 @@ export function FileDetailPage() {
             <div className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-navy-900 dark:border-white/10 dark:text-white">
               Preview
             </div>
-            <FilePreview file={file} />
+            <FilePreview file={file} canDownload={canDownload} />
           </div>
         </div>
 

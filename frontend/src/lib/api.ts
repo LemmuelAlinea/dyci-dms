@@ -90,6 +90,20 @@ export const api = {
 
   createOrganization: (input: { name: string; code: string; type: string }) =>
     post<{ organization: unknown }>('/admin/organizations', input),
+
+  uploadVersion: async (fileId: string, file: File): Promise<{ version: number }> => {
+    if (!BASE) throw new Error('Backend API is not configured (VITE_API_URL is empty).');
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${BASE}/files/${fileId}/version`, {
+      method: 'POST',
+      headers: { ...(await authHeader()) },
+      body: fd,
+    });
+    const json = (await res.json().catch(() => ({}))) as { version?: number; error?: string };
+    if (!res.ok) throw new Error(json.error ?? `Upload failed (${res.status})`);
+    return json as { version: number };
+  },
 };
 
 interface MiniProfile {

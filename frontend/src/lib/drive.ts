@@ -72,7 +72,7 @@ export async function listReleased(orgId: string, search = ''): Promise<FileItem
 export async function listSharedWithMe(userId: string): Promise<SharedFileItem[]> {
   const { data: shares, error: sharesErr } = await supabase
     .from('shares')
-    .select('target_id, permission, can_download') // permission reserved for a future access-level badge
+    .select('target_id, permission')
     .eq('target_type', 'file')
     .eq('shared_with_user_id', userId);
   if (sharesErr) throw sharesErr;
@@ -84,7 +84,7 @@ export async function listSharedWithMe(userId: string): Promise<SharedFileItem[]
   if (error) throw error;
   return ((data as FileItem[]) ?? []).map((f) => {
     const s = byId.get(f.id);
-    return { ...f, _share: s ? { permission: s.permission, can_download: s.can_download } : undefined };
+    return { ...f, _share: s ? { permission: s.permission } : undefined };
   });
 }
 
@@ -237,10 +237,10 @@ export async function renameFile(fileId: string, name: string) {
   await supabase.from('files').update({ name }).eq('id', fileId);
 }
 
-export async function myShareForFile(fileId: string, userId: string): Promise<{ permission: string; can_reshare: boolean } | null> {
+export async function myShareForFile(fileId: string, userId: string): Promise<{ permission: string } | null> {
   const { data, error } = await supabase
     .from('shares')
-    .select('permission, can_reshare')
+    .select('permission')
     .eq('target_type', 'file')
     .eq('target_id', fileId)
     .eq('shared_with_user_id', userId)

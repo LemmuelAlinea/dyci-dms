@@ -67,7 +67,10 @@ export async function buildAttachments(userId: string, fileIds: string[]): Promi
     }
 
     const buf = await downloadObject('documents', version.storage_path);
-    attachments.push({ name: file.name, content: buf.toString('base64') });
+    // Brevo needs a recognizable extension; the display name may not have one.
+    const ext = version.storage_path.split('.').pop();
+    const attachName = ext && !file.name.toLowerCase().endsWith(`.${ext.toLowerCase()}`) ? `${file.name}.${ext}` : file.name;
+    attachments.push({ name: attachName, content: buf.toString('base64') });
   }
   return attachments;
 }

@@ -11,14 +11,15 @@ export function FilePreview({ file, canDownload = true }: { file: FileItem; canD
   const category = previewCategory(file.name, file.kind);
   const [url, setUrl] = useState<string | null>(null);
   const [text, setText] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(category === 'pdf' || category === 'image' || category === 'text');
 
   useEffect(() => {
     let active = true;
     setUrl(null);
     setText(null);
-    if (category === 'pdf' || category === 'image' || category === 'text') {
-      setLoading(true);
+    const willLoad = category === 'pdf' || category === 'image' || category === 'text';
+    setLoading(willLoad);
+    if (willLoad) {
       signedUrlForVersion(file.id, file.current_version)
         .then(async (u) => {
           if (!active) return;

@@ -1,4 +1,4 @@
-import { FileText, FileSpreadsheet, FileType2, File as FileIcon, Folder } from 'lucide-react';
+import { FileText, FileSpreadsheet, FileType2, File as FileIcon, Folder, Presentation } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const MAP: Record<string, { Icon: typeof FileText; color: string }> = {
@@ -7,6 +7,7 @@ const MAP: Record<string, { Icon: typeof FileText; color: string }> = {
   gdoc: { Icon: FileText, color: 'text-blue-500' },
   xlsx: { Icon: FileSpreadsheet, color: 'text-emerald-500' },
   gsheet: { Icon: FileSpreadsheet, color: 'text-emerald-500' },
+  pptx: { Icon: Presentation, color: 'text-orange-500' },
   other: { Icon: FileIcon, color: 'text-slate-400' },
 };
 

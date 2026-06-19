@@ -203,7 +203,9 @@ create table if not exists public.shares (
   target_id           uuid not null,
   shared_by           uuid not null references public.profiles(id) on delete cascade,
   shared_with_user_id uuid references public.profiles(id) on delete cascade,
-  permission          text not null default 'view' check (permission in ('view','download')),
+  permission          text not null default 'view' check (permission in ('view','edit','download')),
+  can_download        boolean not null default true,
+  can_reshare         boolean not null default false,
   created_at          timestamptz not null default now()
 );
 create index if not exists idx_shares_target on public.shares(target_type, target_id);

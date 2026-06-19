@@ -90,6 +90,9 @@ export const api = {
 
   createOrganization: (input: { name: string; code: string; type: string }) =>
     post<{ organization: unknown }>('/admin/organizations', input),
+
+  onlyofficeConfig: (fileId: string) =>
+    post<{ config: Record<string, unknown>; scriptUrl: string; mode: 'edit' | 'view' }>('/onlyoffice/config', { fileId }),
 };
 
 interface MiniProfile {

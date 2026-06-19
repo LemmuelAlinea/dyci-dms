@@ -92,10 +92,10 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [access, setAccess] = useState<'view' | 'edit'>('view');
   const [canDownload, setCanDownload] = useState(true);
-  const [canReshare, setCanReshare] = useState(false);
+  const [grantReshare, setGrantReshare] = useState(false);
   const editable = isEditableKind(file.kind);
   const isOwner = file.owner_id === userId;
-  const { data: myShare } = useQuery({
+  const { data: myShare, isLoading: isLoadingMyShare } = useQuery({
     queryKey: ['myShare', file.id, userId],
     queryFn: () => myShareForFile(file.id, userId!),
     enabled: open && !isOwner && !!userId,
@@ -124,7 +124,7 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
         await shareFileWithMember(orgId, file.id, uid, {
           access: canGrantEdit && editable ? access : 'view',
           canDownload,
-          canReshare: isOwner ? canReshare : false,
+          canReshare: isOwner ? grantReshare : false,
         });
       await notifyUsers([...selected], {
         type: 'share',
@@ -136,7 +136,7 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
       setSelected(new Set());
       setAccess('view');
       setCanDownload(true);
-      setCanReshare(false);
+      setGrantReshare(false);
       onClose();
     } catch (e) {
       toast.error((e as Error).message);
@@ -175,7 +175,9 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
 
       {tab === 'members' ? (
         <div>
-          {!mayReshareFile ? (
+          {!isOwner && isLoadingMyShare ? (
+            <div className="grid place-items-center py-6"><Spinner /></div>
+          ) : !mayReshareFile ? (
             <p className="text-sm text-slate-500">You don't have permission to share this file with others.</p>
           ) : isLoading ? (
             <div className="grid place-items-center py-6"><Spinner /></div>
@@ -231,7 +233,7 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
                 </label>
                 {isOwner && (
                   <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={canReshare} onChange={(e) => setCanReshare(e.target.checked)} className="h-4 w-4 accent-navy-700" />
+                    <input type="checkbox" checked={grantReshare} onChange={(e) => setGrantReshare(e.target.checked)} className="h-4 w-4 accent-navy-700" />
                     Allow re-sharing with other members
                   </label>
                 )}

@@ -9,6 +9,9 @@ export const onlyofficeRouter = Router();
 
 const BUCKET = 'documents';
 const OFFICE_KINDS = ['docx', 'xlsx', 'pptx'];
+const MAX_BYTES = 50 * 1024 * 1024; // 50 MB cap on an edited office file
+
+interface OoCallbackPayload { status?: number; url?: string }
 
 const configSchema = z.object({ fileId: z.string().uuid() });
 
@@ -91,10 +94,9 @@ const EXT_BY_KIND: Record<string, string> = { docx: 'docx', xlsx: 'xlsx', pptx: 
 onlyofficeRouter.post('/callback', async (req, res) => {
   try {
     const token = (req.body?.token as string | undefined) ?? (req.headers.authorization ?? '').replace('Bearer ', '');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let payload: any;
+    let payload: OoCallbackPayload;
     try {
-      payload = verifyCallbackToken(token);
+      payload = verifyCallbackToken(token) as OoCallbackPayload;
     } catch {
       return res.status(401).json({ error: 1 });
     }
@@ -119,8 +121,20 @@ onlyofficeRouter.post('/callback', async (req, res) => {
     }
 
     const resp = await fetch(downloadUrl);
-    if (!resp.ok) return res.json({ error: 0 });
+    if (!resp.ok) {
+      console.error('[onlyoffice] fetch from OnlyOffice failed', resp.status, fileId);
+      return res.json({ error: 0 });
+    }
+    const declared = Number(resp.headers.get('content-length') ?? 0);
+    if (declared > MAX_BYTES) {
+      console.error('[onlyoffice] callback file too large', declared, fileId);
+      return res.json({ error: 0 });
+    }
     const buffer = Buffer.from(await resp.arrayBuffer());
+    if (buffer.length > MAX_BYTES) {
+      console.error('[onlyoffice] callback file too large (post-read)', buffer.length, fileId);
+      return res.json({ error: 0 });
+    }
 
     const next = file.current_version + 1;
     const ext = EXT_BY_KIND[file.kind] ?? 'bin';
@@ -133,8 +147,13 @@ onlyofficeRouter.post('/callback', async (req, res) => {
         : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
     const { error: upErr } = await supabaseAdmin.storage.from(BUCKET).upload(path, buffer, { contentType, upsert: false });
-    if (upErr) return res.json({ error: 0 });
+    if (upErr) {
+      console.error('[onlyoffice] storage upload failed for', fileId, 'v' + next, upErr.message);
+      return res.json({ error: 0 });
+    }
 
+    // file_versions has a UNIQUE (file_id, version_no) constraint, so a duplicate
+    // status-2 callback fails cleanly here rather than creating a ghost version.
     await supabaseAdmin.from('file_versions').insert({
       file_id: file.id,
       version_no: next,

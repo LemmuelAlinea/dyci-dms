@@ -5,7 +5,13 @@ export type AccessLevel = 'edit' | 'view' | 'none';
 
 const EDITABLE_KINDS = ['docx', 'xlsx', 'pptx'];
 
-/** Pure access decision used by the /onlyoffice/config gate. */
+/**
+ * Pure access decision used by the /onlyoffice/config gate.
+ *
+ * `isOrgAdmin` means the org **admin** role specifically (matching the DB
+ * `is_org_admin` RLS helper, which is admin-only, NOT co_admin).
+ * The route handler must set this from `role === 'admin'`.
+ */
 export function decideAccess(p: {
   isOwner: boolean;
   isOrgAdmin: boolean;
@@ -15,6 +21,7 @@ export function decideAccess(p: {
   released: boolean;
 }): AccessLevel {
   const editableKind = EDITABLE_KINDS.includes(p.kind);
+  // 'pending' (in approval) and 'approved'/'released' are intentionally not editable; an owner can still VIEW them.
   const editableStatus = p.status === 'draft' || p.status === 'rejected';
   if (editableKind && editableStatus && (p.isOwner || p.sharePermission === 'edit')) return 'edit';
   if (p.isOwner || p.isOrgAdmin || p.released || p.sharePermission != null) return 'view';
@@ -59,7 +66,7 @@ export function buildEditorConfig(p: EditorConfigParams) {
 }
 
 export function signConfig(config: object, secret: string = env.onlyofficeJwtSecret): string {
-  return jwt.sign(config, secret);
+  return jwt.sign(config, secret, { expiresIn: '5m' });
 }
 
 export function verifyCallbackToken(token: string, secret: string = env.onlyofficeJwtSecret): unknown {

@@ -18,7 +18,7 @@ export const env = {
   appUrl: process.env.APP_URL ?? 'http://localhost:5173',
   backendPublicUrl: process.env.BACKEND_PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 8787}`,
   onlyofficeUrl: process.env.ONLYOFFICE_URL ?? '',
-  onlyofficeJwtSecret: process.env.ONLYOFFICE_JWT_SECRET ?? '',
+  onlyofficeJwtSecret: required('ONLYOFFICE_JWT_SECRET'),
   supabaseUrl: required('SUPABASE_URL'),
   supabaseServiceRoleKey: required('SUPABASE_SERVICE_ROLE_KEY'),
   brevoApiKey: required('BREVO_API_KEY'),

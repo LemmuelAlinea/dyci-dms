@@ -24,6 +24,15 @@ describe('decideAccess', () => {
   it('stranger with no share/owner/admin -> none', () => {
     expect(decideAccess(base)).toBe('none');
   });
+  it('rejected file + owner -> edit (revise & resubmit)', () => {
+    expect(decideAccess({ ...base, isOwner: true, status: 'rejected' })).toBe('edit');
+  });
+  it('pending file + owner -> view (locked during approval, still viewable)', () => {
+    expect(decideAccess({ ...base, isOwner: true, status: 'pending' })).toBe('view');
+  });
+  it('org admin (not owner) on a draft -> view, never edit', () => {
+    expect(decideAccess({ ...base, isOrgAdmin: true })).toBe('view');
+  });
 });
 
 describe('docTypeFor', () => {
@@ -45,6 +54,16 @@ describe('buildEditorConfig', () => {
     expect(c.documentType).toBe('word');
     expect(c.editorConfig.mode).toBe('edit');
     expect(c.document.permissions.edit).toBe(true);
+  });
+  it('view mode sets edit=false', () => {
+    const c = buildEditorConfig({
+      fileId: 'f1', title: 'X.docx', fileType: 'docx', documentUrl: 'https://s/u',
+      versionKey: 'f1-v1', mode: 'view', user: { id: 'u1', name: 'Ana' },
+      callbackUrl: 'https://b/cb', allowDownload: false,
+    });
+    expect(c.editorConfig.mode).toBe('view');
+    expect(c.document.permissions.edit).toBe(false);
+    expect(c.document.permissions.download).toBe(false);
   });
 });
 

@@ -5,6 +5,7 @@ import { signedUrlForVersion } from '@/lib/drive';
 import { previewCategory, formatBytes } from '@/lib/utils';
 import { FileKindIcon } from '@/components/ui/FileKindIcon';
 import { Spinner } from '@/components/ui/Spinner';
+import { OnlyOfficeEditor } from '@/components/drive/OnlyOfficeEditor';
 import type { FileItem } from '@/lib/types';
 
 export function FilePreview({ file, canDownload = true }: { file: FileItem; canDownload?: boolean }) {
@@ -60,6 +61,10 @@ export function FilePreview({ file, canDownload = true }: { file: FileItem; canD
     return isCsv ? <CsvTable text={text} /> : (
       <pre className="max-h-[560px] overflow-auto whitespace-pre-wrap p-4 text-xs leading-relaxed text-slate-700 dark:text-slate-200">{text}</pre>
     );
+  }
+
+  if (category === 'office') {
+    return <OnlyOfficeEditor fileId={file.id} className="h-[620px] w-full" />;
   }
 
   return (

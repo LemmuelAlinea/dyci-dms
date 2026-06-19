@@ -10,16 +10,19 @@ import {
   FileUp,
   History,
   Megaphone,
+  Pencil,
   Send,
   Share2,
   Trash2,
+  X,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { listVersions, setFileState, signedUrlForVersion, uploadNewVersion } from '@/lib/drive';
 import { getDocumentType } from '@/lib/documentTypes';
 import { getLatestRequestForFile, getRequestSteps, releaseFile } from '@/lib/approvals';
 import { ApprovalTracker } from '@/components/drive/ApprovalTracker';
-import { formatBytes } from '@/lib/utils';
+import { formatBytes, isEditableKind } from '@/lib/utils';
+import { OnlyOfficeEditor } from '@/components/drive/OnlyOfficeEditor';
 import { Spinner } from '@/components/ui/Spinner';
 import { Avatar } from '@/components/ui/Avatar';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -44,6 +47,7 @@ export function FileDetailPage() {
   const [approve, setApprove] = useState(false);
   const [confirm, setConfirm] = useState<{ title: string; desc: string; danger?: boolean; label?: string; run: () => Promise<void> } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const { data: file, isLoading } = useQuery({
     queryKey: ['file', id],
@@ -97,6 +101,7 @@ export function FileDetailPage() {
   }
 
   const isOwner = file.owner_id === userId;
+  const canEditInline = isEditableKind(file.kind) && (file.status === 'draft' || file.status === 'rejected') && isOwner;
 
   return (
     <div>
@@ -163,6 +168,11 @@ export function FileDetailPage() {
                     {busy ? <Spinner className="h-4 w-4" /> : <FileUp size={16} />} New version
                   </button>
                 </>
+              )}
+              {canEditInline && (
+                <button onClick={() => setFullscreen(true)} className="btn-primary">
+                  <Pencil size={16} /> Edit
+                </button>
               )}
             </div>
 
@@ -314,6 +324,19 @@ export function FileDetailPage() {
           confirmLabel={confirm.label ?? 'Confirm'}
           onConfirm={confirm.run}
         />
+      )}
+      {fullscreen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-navy-950">
+          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2 dark:border-white/10">
+            <span className="truncate font-semibold text-navy-900 dark:text-white">{file.name} — Editing</span>
+            <button onClick={() => { setFullscreen(false); refresh(); }} className="btn-ghost">
+              <X size={18} /> Close
+            </button>
+          </div>
+          <div className="flex-1">
+            <OnlyOfficeEditor fileId={file.id} className="h-full w-full" onClosed={refresh} />
+          </div>
+        </div>
       )}
     </div>
   );

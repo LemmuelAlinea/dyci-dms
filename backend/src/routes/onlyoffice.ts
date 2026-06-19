@@ -3,12 +3,11 @@ import { z } from 'zod';
 import { supabaseAdmin } from '../lib/supabaseAdmin.js';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
 import { env } from '../lib/env.js';
-import { buildEditorConfig, decideAccess, signConfig, verifyCallbackToken } from '../lib/onlyoffice.js';
+import { buildEditorConfig, decideAccess, EDITABLE_KINDS, signConfig, verifyCallbackToken } from '../lib/onlyoffice.js';
 
 export const onlyofficeRouter = Router();
 
 const BUCKET = 'documents';
-const OFFICE_KINDS = ['docx', 'xlsx', 'pptx'];
 const MAX_BYTES = 50 * 1024 * 1024; // 50 MB cap on an edited office file
 
 interface OoCallbackPayload { status?: number; url?: string }
@@ -21,6 +20,10 @@ onlyofficeRouter.post('/config', requireAuth, async (req: AuthedRequest, res) =>
   const userId = req.user!.id;
   const { fileId } = parsed.data;
 
+  if (!env.onlyofficeUrl || !env.onlyofficeJwtSecret) {
+    return res.status(503).json({ error: 'OnlyOffice editing is not configured on this server.' });
+  }
+
   try {
     const { data: file } = await supabaseAdmin
       .from('files')
@@ -28,7 +31,7 @@ onlyofficeRouter.post('/config', requireAuth, async (req: AuthedRequest, res) =>
       .eq('id', fileId)
       .single();
     if (!file) return res.status(404).json({ error: 'File not found' });
-    if (!OFFICE_KINDS.includes(file.kind)) return res.status(400).json({ error: 'Not an editable office file' });
+    if (!EDITABLE_KINDS.includes(file.kind)) return res.status(400).json({ error: 'Not an editable office file' });
 
     const [{ data: membership }, { data: share }] = await Promise.all([
       supabaseAdmin.from('organization_members').select('role').eq('org_id', file.org_id).eq('user_id', userId).maybeSingle(),

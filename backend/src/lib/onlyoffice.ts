@@ -3,7 +3,7 @@ import { env } from './env.js';
 
 export type AccessLevel = 'edit' | 'view' | 'none';
 
-const EDITABLE_KINDS = ['docx', 'xlsx', 'pptx'];
+export const EDITABLE_KINDS = ['docx', 'xlsx', 'pptx'];
 
 /**
  * Pure access decision used by the /onlyoffice/config gate.

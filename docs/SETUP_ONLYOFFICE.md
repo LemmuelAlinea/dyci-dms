@@ -137,17 +137,15 @@ be served over HTTPS.
 | `ONLYOFFICE_JWT_SECRET` | the secret from Step 3 (exact same value) |
 | `BACKEND_PUBLIC_URL` | your backend's public URL, e.g. `https://dyci-dms-backend.up.railway.app` |
 
-**Frontend (Vercel → Project → Settings → Environment Variables):**
+**Frontend (Vercel):** no OnlyOffice-specific environment variable is needed — the
+editor script URL is supplied by the backend's `/onlyoffice/config` response (driven
+by the backend's `ONLYOFFICE_URL`).
 
-| Variable | Value |
-|---|---|
-| `VITE_ONLYOFFICE_URL` | `https://office.yourdomain.com` |
+Redeploy the backend after setting its variables.
 
-Redeploy both after setting these (Vercel needs a rebuild to bake in the `VITE_` var).
-
-For **local development**, add the same to `backend/.env` and `frontend/.env`
-(`VITE_ONLYOFFICE_URL=...`). The OnlyOffice server must still be able to reach your
-Supabase signed URLs, and must be reachable from your browser.
+For **local development**, add the three backend variables to `backend/.env`. The
+OnlyOffice server must still be able to reach your Supabase signed URLs, and must be
+reachable from your browser.
 
 ---
 
@@ -175,7 +173,7 @@ Supabase signed URLs, and must be reachable from your browser.
 
 | Symptom | Likely cause / fix |
 |---|---|
-| Editor area blank / script fails to load | `VITE_ONLYOFFICE_URL` wrong, or HTTPS not working on the OnlyOffice host. Re-check Step 4. |
+| Editor area blank / script fails to load | Backend `ONLYOFFICE_URL` wrong/unset, or HTTPS not working on the OnlyOffice host. Re-check Steps 4–5. |
 | "Download failed" inside the editor | OnlyOffice can't fetch the Supabase signed URL (VM has no outbound HTTPS), or signed-URL TTL too short. Check Step 6. |
 | Token / JWT errors | `ONLYOFFICE_JWT_SECRET` mismatch between container and backend. Must be identical. |
 | Edits never become a new version | Backend `/onlyoffice/callback` not reachable from the OnlyOffice host, or `BACKEND_PUBLIC_URL` wrong. Check backend logs. |

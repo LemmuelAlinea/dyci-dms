@@ -236,3 +236,15 @@ export async function permanentlyDeleteFile(file: FileItem) {
 export async function renameFile(fileId: string, name: string) {
   await supabase.from('files').update({ name }).eq('id', fileId);
 }
+
+export async function myShareForFile(fileId: string, userId: string): Promise<{ permission: string; can_reshare: boolean } | null> {
+  const { data, error } = await supabase
+    .from('shares')
+    .select('permission, can_reshare')
+    .eq('target_type', 'file')
+    .eq('target_id', fileId)
+    .eq('shared_with_user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}

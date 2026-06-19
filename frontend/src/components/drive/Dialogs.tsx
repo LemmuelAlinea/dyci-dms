@@ -9,7 +9,7 @@ import { listMembers, shareFileWithMember } from '@/lib/org';
 import { approverChoices, createApprovalRequest, getApprovalPlan, type PlanStep } from '@/lib/approvals';
 import { notifyUsers } from '@/lib/notify';
 import { api } from '@/lib/api';
-import { createFolder, renameFile } from '@/lib/drive';
+import { createFolder, renameFile, myShareForFile } from '@/lib/drive';
 import { ROLE_LABEL, type FileItem } from '@/lib/types';
 import { useAuth } from '@/store/auth';
 import { isEditableKind } from '@/lib/utils';
@@ -94,6 +94,14 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
   const [canDownload, setCanDownload] = useState(true);
   const [canReshare, setCanReshare] = useState(false);
   const editable = isEditableKind(file.kind);
+  const isOwner = file.owner_id === userId;
+  const { data: myShare } = useQuery({
+    queryKey: ['myShare', file.id, userId],
+    queryFn: () => myShareForFile(file.id, userId!),
+    enabled: open && !isOwner && !!userId,
+  });
+  const mayReshareFile = isOwner || myShare?.can_reshare === true;
+  const canGrantEdit = isOwner;
   const { data: members, isLoading } = useQuery({ queryKey: ['members', orgId], queryFn: () => listMembers(orgId), enabled: open });
 
   const others = (members ?? []).filter((m) => m.user_id !== userId);
@@ -114,9 +122,9 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
     try {
       for (const uid of selected)
         await shareFileWithMember(orgId, file.id, uid, {
-          access: editable ? access : 'view',
+          access: canGrantEdit && editable ? access : 'view',
           canDownload,
-          canReshare,
+          canReshare: isOwner ? canReshare : false,
         });
       await notifyUsers([...selected], {
         type: 'share',
@@ -167,7 +175,9 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
 
       {tab === 'members' ? (
         <div>
-          {isLoading ? (
+          {!mayReshareFile ? (
+            <p className="text-sm text-slate-500">You don't have permission to share this file with others.</p>
+          ) : isLoading ? (
             <div className="grid place-items-center py-6"><Spinner /></div>
           ) : others.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-400">No other members in this office yet.</p>
@@ -202,9 +212,9 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
                     </button>
                     <button
                       type="button"
-                      disabled={!editable}
+                      disabled={!editable || !canGrantEdit}
                       onClick={() => setAccess('edit')}
-                      title={!editable ? 'Editing is available for Word, Excel and PowerPoint files only' : undefined}
+                      title={!editable ? 'Editing is available for Word, Excel and PowerPoint files only' : !canGrantEdit ? 'Only the file owner can grant edit access' : undefined}
                       className={`${access === 'edit' ? 'btn-primary' : 'btn-outline'} flex-1 disabled:cursor-not-allowed disabled:opacity-50`}
                     >
                       Can edit
@@ -219,10 +229,12 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
                   <input type="checkbox" checked={canDownload} onChange={(e) => setCanDownload(e.target.checked)} className="h-4 w-4 accent-navy-700" />
                   Allow download
                 </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={canReshare} onChange={(e) => setCanReshare(e.target.checked)} className="h-4 w-4 accent-navy-700" />
-                  Allow re-sharing with other members
-                </label>
+                {isOwner && (
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={canReshare} onChange={(e) => setCanReshare(e.target.checked)} className="h-4 w-4 accent-navy-700" />
+                    Allow re-sharing with other members
+                  </label>
+                )}
               </div>
 
               <button onClick={shareWithSelected} disabled={busy || selected.size === 0} className="btn-primary mt-4 w-full">

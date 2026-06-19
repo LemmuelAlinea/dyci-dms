@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
-import { Check, CheckSquare, Download, MessageSquare, Send, X } from 'lucide-react';
+import { Check, CheckSquare, Download, MessageSquare, Search, Send, X } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
@@ -28,10 +28,26 @@ export function ApprovalsPage() {
   const userId = useAuth((s) => s.session?.user.id)!;
   const [tab, setTab] = useState<'review' | 'requests'>('review');
   const [active, setActive] = useState<ApprovalRequest | null>(null);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   const review = useQuery({ queryKey: ['toReview', userId], queryFn: () => listToReview(userId) });
   const requests = useQuery({ queryKey: ['myRequests', userId], queryFn: () => listMyRequests(userId) });
   const list = tab === 'review' ? review : requests;
+
+  const rows = list.data ?? [];
+  const filtered = rows.filter((r) => {
+    if (statusFilter && r.status !== statusFilter) return false;
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      const hay = [r.files?.name, r.files?.reference_no, r.requester?.full_name, r.status]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
 
   return (
     <div>
@@ -49,17 +65,39 @@ export function ApprovalsPage() {
         ))}
       </div>
 
+      {!list.isLoading && rows.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[200px] flex-1">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="input pl-9"
+              placeholder="Search by document, reference, owner, or status…"
+            />
+          </div>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="input !w-auto">
+            <option value="">Any status</option>
+            {['pending', 'approved', 'rejected'].map((s) => (
+              <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {list.isLoading ? (
         <div className="grid place-items-center py-20"><Spinner className="h-7 w-7" /></div>
-      ) : !list.data?.length ? (
+      ) : !rows.length ? (
         <EmptyState
           icon="/assets/icon-approval-stamp.png"
           title={tab === 'review' ? 'Nothing to review' : 'No requests yet'}
           description={tab === 'review' ? 'Documents waiting for your approval will appear here.' : 'Request approval on a file from your drive to start.'}
         />
+      ) : !filtered.length ? (
+        <EmptyState title="No matches" description="Try a different search term or status filter." />
       ) : (
         <div className="space-y-3">
-          {list.data.map((r) => (
+          {filtered.map((r) => (
             <ApprovalRow key={r.id} request={r} side={tab} onOpen={() => setActive(r)} />
           ))}
         </div>

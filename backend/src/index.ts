@@ -9,6 +9,7 @@ import { messagesRouter } from './routes/messages.js';
 import { approvalsRouter } from './routes/approvals.js';
 import { adminRouter } from './routes/admin.js';
 import { reportsRouter } from './routes/reports.js';
+import { filesRouter } from './routes/files.js';
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use('/messages', messagesRouter);
 app.use('/approvals', approvalsRouter);
 app.use('/admin', adminRouter);
 app.use('/reports', reportsRouter);
+app.use('/files', filesRouter);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

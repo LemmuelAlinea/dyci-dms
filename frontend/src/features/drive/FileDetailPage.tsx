@@ -25,6 +25,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { FileKindIcon } from '@/components/ui/FileKindIcon';
 import { ConfirmDialog, RequestApprovalDialog, ShareDialog } from '@/components/drive/Dialogs';
+import { FilePreview } from '@/components/drive/FilePreview';
 import { useAuth } from '@/store/auth';
 import type { FileItem } from '@/lib/types';
 
@@ -42,7 +43,6 @@ export function FileDetailPage() {
   const [share, setShare] = useState(false);
   const [approve, setApprove] = useState(false);
   const [confirm, setConfirm] = useState<{ title: string; desc: string; danger?: boolean; label?: string; run: () => Promise<void> } | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const { data: file, isLoading } = useQuery({
@@ -76,15 +76,6 @@ export function FileDetailPage() {
     qc.invalidateQueries({ queryKey: ['versions', id] });
   };
 
-  const loadPreview = async (versionNo: number) => {
-    try {
-      const url = await signedUrlForVersion(id!, versionNo);
-      setPreview(url);
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  };
-
   const onNewVersion = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f || !file) return;
@@ -106,7 +97,6 @@ export function FileDetailPage() {
   }
 
   const isOwner = file.owner_id === userId;
-  const canPreviewPdf = file.kind === 'pdf';
 
   return (
     <div>
@@ -231,21 +221,7 @@ export function FileDetailPage() {
             <div className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-navy-900 dark:border-white/10 dark:text-white">
               Preview
             </div>
-            {preview && canPreviewPdf ? (
-              <iframe title="preview" src={preview} className="h-[520px] w-full" />
-            ) : (
-              <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-                <FileKindIcon kind={file.kind} size={44} />
-                <p className="text-sm text-slate-500">
-                  {canPreviewPdf ? 'Load the PDF preview below.' : 'In-browser preview is available for PDF files. Download to view this file.'}
-                </p>
-                {canPreviewPdf && (
-                  <button onClick={() => loadPreview(file.current_version)} className="btn-primary">
-                    Load preview
-                  </button>
-                )}
-              </div>
-            )}
+            <FilePreview file={file} />
           </div>
         </div>
 

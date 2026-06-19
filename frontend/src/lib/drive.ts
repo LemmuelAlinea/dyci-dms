@@ -69,16 +69,21 @@ export async function listReleased(orgId: string, search = ''): Promise<FileItem
   return (data as FileItem[]) ?? [];
 }
 
-export async function listSharedWithMe(userId: string): Promise<FileItem[]> {
+export async function listSharedWithMe(userId: string): Promise<(FileItem & { _share?: { permission: string; can_download: boolean } })[]> {
   const { data: shares } = await supabase
     .from('shares')
-    .select('target_id')
+    .select('target_id, permission, can_download')
     .eq('target_type', 'file')
     .eq('shared_with_user_id', userId);
-  const ids = (shares ?? []).map((s) => s.target_id);
+  const rows = shares ?? [];
+  const ids = rows.map((s) => s.target_id);
   if (!ids.length) return [];
+  const byId = new Map(rows.map((s) => [s.target_id, s]));
   const { data } = await supabase.from('files').select(`*, ${OWNER}, ${APPROVER}`).in('id', ids);
-  return (data as FileItem[]) ?? [];
+  return ((data as FileItem[]) ?? []).map((f) => ({
+    ...f,
+    _share: byId.get(f.id) ? { permission: byId.get(f.id)!.permission, can_download: byId.get(f.id)!.can_download } : undefined,
+  }));
 }
 
 export async function searchEverything(orgId: string, term: string): Promise<{ files: FileItem[]; folders: Folder[] }> {

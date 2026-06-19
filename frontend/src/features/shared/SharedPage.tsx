@@ -15,9 +15,11 @@ export function SharedPage() {
   const userId = useAuth((s) => s.session?.user.id);
   const { data: files, isLoading } = useQuery({ queryKey: ['shared', userId], queryFn: () => listSharedWithMe(userId!), enabled: !!userId });
 
-  const actions = (file: FileItem): ActionItem[] => [
+  const actions = (file: FileItem & { _share?: { permission: string; can_download: boolean } }): ActionItem[] => [
     { label: 'Details', icon: Info, onClick: () => navigate(`/app/file/${file.id}`) },
-    { label: 'Download', icon: Download, onClick: async () => window.open(await signedUrlForVersion(file.id, file.current_version, true), '_blank') },
+    ...(file._share?.can_download !== false
+      ? [{ label: 'Download', icon: Download, onClick: async () => window.open(await signedUrlForVersion(file.id, file.current_version, true), '_blank') }]
+      : []),
   ];
 
   return (

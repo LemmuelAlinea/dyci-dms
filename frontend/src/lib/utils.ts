@@ -75,3 +75,18 @@ export function slug(str: string): string {
 export function randomId(): string {
   return crypto.randomUUID();
 }
+
+export type PreviewCategory = 'pdf' | 'image' | 'office' | 'text' | 'none';
+
+const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'];
+const TEXT_EXT = ['txt', 'csv', 'md', 'markdown', 'json', 'log'];
+
+/** Decide how to preview a file from its name + kind. */
+export function previewCategory(fileName: string, kind: string): PreviewCategory {
+  const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+  if (kind === 'pdf' || ext === 'pdf') return 'pdf';
+  if (IMAGE_EXT.includes(ext)) return 'image';
+  if (TEXT_EXT.includes(ext)) return 'text';
+  if (kind === 'docx' || kind === 'xlsx' || kind === 'pptx') return 'office';
+  return 'none';
+}

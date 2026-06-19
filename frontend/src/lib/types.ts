@@ -184,6 +184,8 @@ export interface ShareOptions {
   canReshare: boolean;
 }
 
+export type SharedFileItem = FileItem & { _share?: Pick<Share, 'permission' | 'can_download'> };
+
 export const ROLE_LABEL: Record<OrgRole, string> = {
   admin: 'Admin',
   co_admin: 'Co-Admin',

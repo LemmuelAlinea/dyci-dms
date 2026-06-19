@@ -8,14 +8,14 @@ import { FileCard, type ActionItem } from '@/components/drive/ItemViews';
 import { Avatar } from '@/components/ui/Avatar';
 import { listSharedWithMe, signedUrlForVersion } from '@/lib/drive';
 import { useAuth } from '@/store/auth';
-import type { FileItem } from '@/lib/types';
+import type { SharedFileItem } from '@/lib/types';
 
 export function SharedPage() {
   const navigate = useNavigate();
   const userId = useAuth((s) => s.session?.user.id);
   const { data: files, isLoading } = useQuery({ queryKey: ['shared', userId], queryFn: () => listSharedWithMe(userId!), enabled: !!userId });
 
-  const actions = (file: FileItem & { _share?: { permission: string; can_download: boolean } }): ActionItem[] => [
+  const actions = (file: SharedFileItem): ActionItem[] => [
     { label: 'Details', icon: Info, onClick: () => navigate(`/app/file/${file.id}`) },
     ...(file._share?.can_download !== false
       ? [{ label: 'Download', icon: Download, onClick: async () => window.open(await signedUrlForVersion(file.id, file.current_version, true), '_blank') }]

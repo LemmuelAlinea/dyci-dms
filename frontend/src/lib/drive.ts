@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { kindFromFile, randomId } from './utils';
-import type { FileItem, FileVersion, Folder, NodeState } from './types';
+import type { FileItem, FileVersion, Folder, NodeState, SharedFileItem } from './types';
 
 const BUCKET = 'documents';
 
@@ -69,21 +69,23 @@ export async function listReleased(orgId: string, search = ''): Promise<FileItem
   return (data as FileItem[]) ?? [];
 }
 
-export async function listSharedWithMe(userId: string): Promise<(FileItem & { _share?: { permission: string; can_download: boolean } })[]> {
-  const { data: shares } = await supabase
+export async function listSharedWithMe(userId: string): Promise<SharedFileItem[]> {
+  const { data: shares, error: sharesErr } = await supabase
     .from('shares')
-    .select('target_id, permission, can_download')
+    .select('target_id, permission, can_download') // permission reserved for a future access-level badge
     .eq('target_type', 'file')
     .eq('shared_with_user_id', userId);
+  if (sharesErr) throw sharesErr;
   const rows = shares ?? [];
   const ids = rows.map((s) => s.target_id);
   if (!ids.length) return [];
   const byId = new Map(rows.map((s) => [s.target_id, s]));
-  const { data } = await supabase.from('files').select(`*, ${OWNER}, ${APPROVER}`).in('id', ids);
-  return ((data as FileItem[]) ?? []).map((f) => ({
-    ...f,
-    _share: byId.get(f.id) ? { permission: byId.get(f.id)!.permission, can_download: byId.get(f.id)!.can_download } : undefined,
-  }));
+  const { data, error } = await supabase.from('files').select(`*, ${OWNER}, ${APPROVER}`).in('id', ids);
+  if (error) throw error;
+  return ((data as FileItem[]) ?? []).map((f) => {
+    const s = byId.get(f.id);
+    return { ...f, _share: s ? { permission: s.permission, can_download: s.can_download } : undefined };
+  });
 }
 
 export async function searchEverything(orgId: string, term: string): Promise<{ files: FileItem[]; folders: Folder[] }> {

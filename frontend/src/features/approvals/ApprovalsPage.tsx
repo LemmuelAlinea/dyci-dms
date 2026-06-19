@@ -12,6 +12,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { FileKindIcon } from '@/components/ui/FileKindIcon';
 import { Modal } from '@/components/ui/Modal';
 import { ApprovalTracker } from '@/components/drive/ApprovalTracker';
+import { ConfirmDialog } from '@/components/drive/Dialogs';
 import {
   addRequestComment,
   decideApprovalStep,
@@ -133,6 +134,7 @@ function ApprovalDetail({ request, userId, onClose }: { request: ApprovalRequest
   const navigate = useNavigate();
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
+  const [confirmDecision, setConfirmDecision] = useState<'approved' | 'rejected' | null>(null);
 
   const stepsQ = useQuery({ queryKey: ['reqSteps', request.id], queryFn: () => getRequestSteps(request.id) });
   const commentsQ = useQuery({ queryKey: ['reqComments', request.id], queryFn: () => listRequestComments(request.id) });
@@ -167,6 +169,7 @@ function ApprovalDetail({ request, userId, onClose }: { request: ApprovalRequest
   };
 
   return (
+    <>
     <Modal open onClose={onClose} title={request.files?.name} size="lg">
       <div className="mb-4 flex items-center justify-between">
         <StatusBadge status={request.status === 'pending' ? 'pending' : request.status === 'approved' ? 'approved' : 'rejected'} />
@@ -208,10 +211,22 @@ function ApprovalDetail({ request, userId, onClose }: { request: ApprovalRequest
 
       {myStep && (
         <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4 dark:border-white/10">
-          <button onClick={() => decide('rejected')} disabled={busy} className="btn flex-1 bg-rose-600 text-white hover:bg-rose-500"><X size={16} /> Reject</button>
-          <button onClick={() => decide('approved')} disabled={busy} className="btn-gold flex-1"><Check size={16} /> Approve</button>
+          <button onClick={() => setConfirmDecision('rejected')} disabled={busy} className="btn flex-1 bg-rose-600 text-white hover:bg-rose-500"><X size={16} /> Reject</button>
+          <button onClick={() => setConfirmDecision('approved')} disabled={busy} className="btn-gold flex-1"><Check size={16} /> Approve</button>
         </div>
       )}
     </Modal>
+    {confirmDecision && (
+      <ConfirmDialog
+        open
+        onClose={() => setConfirmDecision(null)}
+        title={confirmDecision === 'approved' ? 'Approve this document?' : 'Reject this document?'}
+        description={`Do you really want to ${confirmDecision === 'approved' ? 'approve' : 'reject'} "${request.files?.name ?? 'this document'}"?`}
+        confirmLabel={confirmDecision === 'approved' ? 'Approve' : 'Reject'}
+        danger={confirmDecision === 'rejected'}
+        onConfirm={() => decide(confirmDecision)}
+      />
+    )}
+    </>
   );
 }

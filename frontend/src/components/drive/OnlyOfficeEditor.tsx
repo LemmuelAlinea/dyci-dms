@@ -17,7 +17,10 @@ function loadScript(src: string): Promise<void> {
       const s = document.createElement('script');
       s.src = src;
       s.onload = () => resolve();
-      s.onerror = () => reject(new Error('Failed to load the OnlyOffice editor script'));
+      s.onerror = () => {
+        scriptPromise = null; // allow a retry on the next mount
+        reject(new Error('Failed to load the OnlyOffice editor script'));
+      };
       document.head.appendChild(s);
     });
   }
@@ -26,17 +29,27 @@ function loadScript(src: string): Promise<void> {
 
 /**
  * Embeds the OnlyOffice editor for a file. Saving is handled by the backend
- * callback; `onClosed` fires when the editor is torn down so the parent can
- * refresh version history.
+ * callback; `onClosed` fires when an initialized editor is torn down so the
+ * parent can refresh version history.
  */
 export function OnlyOfficeEditor({ fileId, onClosed, className }: { fileId: string; onClosed?: () => void; className?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<{ destroyEditor: () => void } | null>(null);
+  const idRef = useRef(`onlyoffice-${Math.random().toString(36).slice(2)}`);
+  const onClosedRef = useRef(onClosed);
+  const initializedRef = useRef(false);
   const [loading, setLoading] = useState(true);
+
+  // Keep the latest onClosed without retriggering the editor effect.
+  useEffect(() => {
+    onClosedRef.current = onClosed;
+  }, [onClosed]);
 
   useEffect(() => {
     let cancelled = false;
-    const containerId = `onlyoffice-${fileId}`;
+    setLoading(true);
+    initializedRef.current = false;
+    const containerId = idRef.current;
     (async () => {
       try {
         const { config, scriptUrl } = await api.onlyofficeConfig(fileId);
@@ -49,6 +62,7 @@ export function OnlyOfficeEditor({ fileId, onClosed, className }: { fileId: stri
           height: '100%',
           width: '100%',
         });
+        initializedRef.current = true;
       } catch (e) {
         if (!cancelled) {
           toast.error((e as Error).message);
@@ -63,9 +77,10 @@ export function OnlyOfficeEditor({ fileId, onClosed, className }: { fileId: stri
       } catch {
         /* already gone */
       }
-      onClosed?.();
+      editorRef.current = null;
+      if (initializedRef.current) onClosedRef.current?.();
     };
-  }, [fileId, onClosed]);
+  }, [fileId]);
 
   return (
     <div className={className ?? 'relative h-[620px] w-full'}>

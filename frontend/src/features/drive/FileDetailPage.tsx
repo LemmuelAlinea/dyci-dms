@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -75,10 +75,10 @@ export function FileDetailPage() {
     enabled: !!request?.id,
   });
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     qc.invalidateQueries({ queryKey: ['file', id] });
     qc.invalidateQueries({ queryKey: ['versions', id] });
-  };
+  }, [qc, id]);
 
   const onNewVersion = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -227,12 +227,14 @@ export function FileDetailPage() {
           )}
 
           {/* Preview */}
-          <div className="card overflow-hidden">
-            <div className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-navy-900 dark:border-white/10 dark:text-white">
-              Preview
+          {!fullscreen && (
+            <div className="card overflow-hidden">
+              <div className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-navy-900 dark:border-white/10 dark:text-white">
+                Preview
+              </div>
+              <FilePreview file={file} />
             </div>
-            <FilePreview file={file} />
-          </div>
+          )}
         </div>
 
         {/* Sidebar: details + versions */}
@@ -329,7 +331,7 @@ export function FileDetailPage() {
         <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-navy-950">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2 dark:border-white/10">
             <span className="truncate font-semibold text-navy-900 dark:text-white">{file.name} — Editing</span>
-            <button onClick={() => { setFullscreen(false); refresh(); }} className="btn-ghost">
+            <button onClick={() => setFullscreen(false)} className="btn-ghost">
               <X size={18} /> Close
             </button>
           </div>

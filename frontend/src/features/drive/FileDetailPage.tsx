@@ -305,13 +305,15 @@ export function FileDetailPage() {
                       {formatBytes(v.size_bytes)} · {formatDistanceToNow(new Date(v.created_at), { addSuffix: true })}
                     </p>
                   </div>
-                  <button
-                    onClick={async () => window.open(await signedUrlForVersion(file.id, v.version_no, true), '_blank')}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-navy-700 dark:hover:bg-white/10"
-                    title="Download this version"
-                  >
-                    <Download size={15} />
-                  </button>
+                  {canDownload && (
+                    <button
+                      onClick={async () => window.open(await signedUrlForVersion(file.id, v.version_no, true), '_blank')}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-navy-700 dark:hover:bg-white/10"
+                      title="Download this version"
+                    >
+                      <Download size={15} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

@@ -61,10 +61,19 @@ filesRouter.post('/:fileId/version', requireAuth, upload.single('file'), async (
     const { data: uploader } = await supabaseAdmin.from('profiles').select('full_name').eq('id', userId).single();
     const uploaderName = uploader?.full_name ?? 'Someone';
 
-    await supabaseAdmin.from('file_versions').insert({
+    const { error: versionErr } = await supabaseAdmin.from('file_versions').insert({
       file_id: file.id, version_no: next, storage_path: path, size_bytes: buffer.length,
       mime: contentType, uploaded_by: userId, note: `Uploaded by ${uploaderName}`,
     });
+    if (versionErr) {
+      // 23505 = unique_violation on (file_id, version_no): a concurrent upload won the race.
+      if ((versionErr as { code?: string }).code === '23505') {
+        console.error('[files] version race for', fileId, 'v' + next);
+        return res.status(409).json({ error: 'Another version was just saved. Please reopen the file and try again.' });
+      }
+      console.error('[files] file_versions insert failed for', fileId, versionErr.message);
+      return res.status(500).json({ error: 'Could not save the new version.' });
+    }
     await supabaseAdmin.from('files').update({ current_version: next, size_bytes: buffer.length, mime: contentType }).eq('id', file.id);
 
     if (!isOwner) {
@@ -79,6 +88,7 @@ filesRouter.post('/:fileId/version', requireAuth, upload.single('file'), async (
 
     return res.json({ version: next });
   } catch (e) {
-    return res.status(400).json({ error: (e as Error).message });
+    console.error('[files] version upload error', e);
+    return res.status(400).json({ error: 'Could not upload the new version.' });
   }
 });

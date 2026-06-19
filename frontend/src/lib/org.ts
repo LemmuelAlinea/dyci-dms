@@ -27,7 +27,7 @@ export async function shareFileWithMember(
   orgId: string,
   fileId: string,
   targetUserId: string,
-  permission: 'view' | 'download' | 'edit',
+  permission: 'view' | 'comment' | 'download' | 'edit',
 ) {
   const { error } = await supabase.from('shares').insert({
     org_id: orgId,

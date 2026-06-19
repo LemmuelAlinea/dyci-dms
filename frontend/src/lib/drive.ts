@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { kindFromFile, randomId } from './utils';
-import type { FileItem, FileVersion, Folder, NodeState, SharedFileItem } from './types';
+import type { FileComment, FileItem, FileVersion, Folder, NodeState, SharedFileItem } from './types';
 
 const BUCKET = 'documents';
 
@@ -235,6 +235,26 @@ export async function permanentlyDeleteFile(file: FileItem) {
 
 export async function renameFile(fileId: string, name: string) {
   await supabase.from('files').update({ name }).eq('id', fileId);
+}
+
+// ── File Comments ─────────────────────────────────────────────────────────────
+export async function listFileComments(fileId: string): Promise<FileComment[]> {
+  const { data, error } = await supabase
+    .from('file_comments')
+    .select('*, author:profiles!file_comments_author_id_fkey(*)')
+    .eq('file_id', fileId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data as FileComment[]) ?? [];
+}
+
+export async function addFileComment(fileId: string, body: string) {
+  const { error } = await supabase.from('file_comments').insert({
+    file_id: fileId,
+    author_id: (await supabase.auth.getUser()).data.user?.id,
+    body,
+  });
+  if (error) throw error;
 }
 
 export async function myShareForFile(fileId: string, userId: string): Promise<{ permission: string } | null> {

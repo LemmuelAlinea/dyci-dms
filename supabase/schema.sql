@@ -194,7 +194,19 @@ create table if not exists public.approval_comments (
 create index if not exists idx_comments_approval on public.approval_comments(approval_id);
 
 -- ----------------------------------------------------------------------------
--- 12. SHARES  (access grants to org members)
+-- 12. FILE COMMENTS  (annotations on shared/owned files)
+-- ----------------------------------------------------------------------------
+create table if not exists public.file_comments (
+  id         uuid primary key default uuid_generate_v4(),
+  file_id    uuid not null references public.files(id) on delete cascade,
+  author_id  uuid not null references public.profiles(id) on delete cascade,
+  body       text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_file_comments_file on public.file_comments(file_id);
+
+-- ----------------------------------------------------------------------------
+-- 13. SHARES  (access grants to org members)
 -- ----------------------------------------------------------------------------
 create table if not exists public.shares (
   id                  uuid primary key default uuid_generate_v4(),
@@ -203,7 +215,7 @@ create table if not exists public.shares (
   target_id           uuid not null,
   shared_by           uuid not null references public.profiles(id) on delete cascade,
   shared_with_user_id uuid references public.profiles(id) on delete cascade,
-  permission          text not null default 'view' check (permission in ('view','edit','download')),
+  permission          text not null default 'view' check (permission in ('view','comment','download','edit')),
   created_at          timestamptz not null default now()
 );
 create index if not exists idx_shares_target on public.shares(target_type, target_id);
@@ -417,6 +429,7 @@ alter table public.files                 enable row level security;
 alter table public.file_versions         enable row level security;
 alter table public.approvals             enable row level security;
 alter table public.approval_comments     enable row level security;
+alter table public.file_comments         enable row level security;
 alter table public.shares                enable row level security;
 alter table public.email_log             enable row level security;
 alter table public.notifications         enable row level security;
@@ -551,6 +564,36 @@ create policy comments_insert on public.approval_comments for insert with check 
   and exists (select 1 from public.approvals a
               where a.id = approval_comments.approval_id
                 and (a.requester_id = auth.uid() or a.approver_id = auth.uid() or is_org_admin(a.org_id)))
+);
+
+-- ---- FILE COMMENTS ----
+drop policy if exists file_comments_select on public.file_comments;
+create policy file_comments_select on public.file_comments for select using (
+  exists (select 1 from public.files f where f.id = file_comments.file_id)
+);
+drop policy if exists file_comments_insert on public.file_comments;
+create policy file_comments_insert on public.file_comments for insert with check (
+  author_id = auth.uid()
+  and exists (
+    select 1 from public.files f
+    where f.id = file_comments.file_id
+      and (
+        f.owner_id = auth.uid()
+        or public.is_org_admin(f.org_id)
+        or exists (
+          select 1 from public.shares s
+          where s.target_type = 'file'
+            and s.target_id = f.id
+            and s.shared_with_user_id = auth.uid()
+            and s.permission in ('comment', 'edit')
+        )
+      )
+  )
+);
+drop policy if exists file_comments_delete on public.file_comments;
+create policy file_comments_delete on public.file_comments for delete using (
+  author_id = auth.uid()
+  or exists (select 1 from public.files f where f.id = file_comments.file_id and public.is_org_admin(f.org_id))
 );
 
 -- ---- SHARES ----

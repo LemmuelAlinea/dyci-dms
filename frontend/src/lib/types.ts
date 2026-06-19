@@ -172,11 +172,20 @@ export interface Share {
   target_id: string;
   shared_by: string;
   shared_with_user_id: string | null;
-  permission: 'view' | 'edit' | 'download';
+  permission: 'view' | 'comment' | 'download' | 'edit';
   created_at: string;
 }
 
 export type SharedFileItem = FileItem & { _share?: { permission: string } };
+
+export interface FileComment {
+  id: string;
+  file_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  author?: Profile;
+}
 
 export const ROLE_LABEL: Record<OrgRole, string> = {
   admin: 'Admin',

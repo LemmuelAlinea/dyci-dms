@@ -17,7 +17,7 @@ export function SharedPage() {
 
   const actions = (file: SharedFileItem): ActionItem[] => [
     { label: 'Details', icon: Info, onClick: () => navigate(`/app/file/${file.id}`) },
-    ...(file._share?.permission && file._share.permission !== 'view'
+    ...(file._share?.permission && (file._share.permission === 'download' || file._share.permission === 'edit')
       ? [{ label: 'Download', icon: Download, onClick: async () => window.open(await signedUrlForVersion(file.id, file.current_version, true), '_blank') }]
       : []),
   ];

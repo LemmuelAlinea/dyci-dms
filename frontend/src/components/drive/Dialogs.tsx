@@ -89,7 +89,7 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [tier, setTier] = useState<'view' | 'download' | 'edit'>('view');
+  const [tier, setTier] = useState<'view' | 'comment' | 'download' | 'edit'>('view');
   const { data: members, isLoading } = useQuery({ queryKey: ['members', orgId], queryFn: () => listMembers(orgId), enabled: open });
 
   const others = (members ?? []).filter((m) => m.user_id !== userId);
@@ -184,6 +184,7 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Recipient access</p>
                 {([
                   ['view', 'View only', 'Can open and read it in the browser. No download.'],
+                  ['comment', 'Comment', 'Can view and comment. Cannot download.'],
                   ['download', 'Download', 'Can view and download. Cannot upload a new version.'],
                   ['edit', 'Edit', 'Can download and upload a new version (saved to your document).'],
                 ] as const).map(([val, label, desc]) => (

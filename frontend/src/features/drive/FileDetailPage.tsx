@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import {
@@ -9,13 +9,14 @@ import {
   Download,
   FileUp,
   History,
+  MessageSquare,
   Megaphone,
   Send,
   Share2,
   Trash2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { listVersions, myShareForFile, setFileState, signedUrlForVersion, uploadNewVersion } from '@/lib/drive';
+import { addFileComment, listFileComments, listVersions, myShareForFile, setFileState, signedUrlForVersion, uploadNewVersion } from '@/lib/drive';
 import { api } from '@/lib/api';
 import { getDocumentType } from '@/lib/documentTypes';
 import { getLatestRequestForFile, getRequestSteps, releaseFile } from '@/lib/approvals';
@@ -28,7 +29,7 @@ import { FileKindIcon } from '@/components/ui/FileKindIcon';
 import { ConfirmDialog, RequestApprovalDialog, ShareDialog } from '@/components/drive/Dialogs';
 import { FilePreview } from '@/components/drive/FilePreview';
 import { useAuth } from '@/store/auth';
-import type { FileItem } from '@/lib/types';
+import type { FileComment, FileItem } from '@/lib/types';
 
 const OWNER = 'owner:profiles!files_owner_id_fkey(*)';
 const APPROVER = 'approver:profiles!files_approved_by_fkey(*)';
@@ -84,6 +85,21 @@ export function FileDetailPage() {
     qc.invalidateQueries({ queryKey: ['versions', id] });
   };
 
+  const [commentBody, setCommentBody] = useState('');
+  const { data: fileComments } = useQuery({
+    queryKey: ['fileComments', id],
+    queryFn: () => listFileComments(id!),
+    enabled: !!id,
+  });
+  const commentMutation = useMutation({
+    mutationFn: () => addFileComment(id!, commentBody.trim()),
+    onSuccess: () => {
+      setCommentBody('');
+      qc.invalidateQueries({ queryKey: ['fileComments', id] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   const onNewVersion = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f || !file) return;
@@ -112,6 +128,7 @@ export function FileDetailPage() {
   const perm = isOwner ? 'owner' : (myShare?.permission ?? null);
   const canDownload = isOwner || perm === 'download' || perm === 'edit';
   const canUpload = (isOwner || perm === 'edit') && (file.status === 'draft' || file.status === 'rejected');
+  const canComment = isOwner || perm === 'comment' || perm === 'edit';
 
   return (
     <div>
@@ -239,6 +256,52 @@ export function FileDetailPage() {
               Preview
             </div>
             <FilePreview file={file} canDownload={canDownload} />
+          </div>
+
+          {/* Comments */}
+          <div className="card p-5">
+            <h3 className="mb-3 flex items-center gap-2 font-display text-sm font-bold text-navy-900 dark:text-white">
+              <MessageSquare size={16} /> Comments
+            </h3>
+            <div className="space-y-3">
+              {(fileComments ?? []).length === 0 && (
+                <p className="text-sm text-slate-400">No comments yet.</p>
+              )}
+              {(fileComments ?? []).map((c: FileComment) => (
+                <div key={c.id} className="flex items-start gap-3">
+                  <Avatar name={c.author?.full_name} url={c.author?.avatar_url} size={28} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-medium text-navy-900 dark:text-white">
+                        {c.author?.full_name ?? 'Unknown'}
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-slate-600 dark:text-slate-300">{c.body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {canComment && (
+              <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3 dark:border-white/10">
+                <textarea
+                  value={commentBody}
+                  onChange={(e) => setCommentBody(e.target.value)}
+                  rows={2}
+                  className="input resize-none text-sm"
+                  placeholder="Add a comment…"
+                />
+                <button
+                  onClick={() => commentBody.trim() && commentMutation.mutate()}
+                  disabled={!commentBody.trim() || commentMutation.isPending}
+                  className="btn-primary self-end"
+                >
+                  {commentMutation.isPending ? <Spinner className="h-4 w-4" /> : 'Send'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

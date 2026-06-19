@@ -45,6 +45,8 @@ const KIND_BY_EXT: Record<string, string> = {
   csv: 'xlsx',
   gdoc: 'gdoc',
   gsheet: 'gsheet',
+  ppt: 'pptx',
+  pptx: 'pptx',
 };
 
 export function kindFromFile(fileName: string, mime?: string): string {
@@ -54,6 +56,13 @@ export function kindFromFile(fileName: string, mime?: string): string {
   if (mime?.includes('word')) return 'docx';
   if (mime?.includes('sheet') || mime?.includes('excel')) return 'xlsx';
   return 'other';
+}
+
+/** File kinds that OnlyOffice can edit in-browser. */
+export const EDITABLE_KINDS = ['docx', 'xlsx', 'pptx'] as const;
+
+export function isEditableKind(kind: string): boolean {
+  return (EDITABLE_KINDS as readonly string[]).includes(kind);
 }
 
 export function slug(str: string): string {

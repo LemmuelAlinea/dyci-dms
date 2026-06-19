@@ -172,7 +172,9 @@ export interface Share {
   target_id: string;
   shared_by: string;
   shared_with_user_id: string | null;
-  permission: 'view' | 'download';
+  permission: 'view' | 'edit' | 'download';
+  can_download: boolean;
+  can_reshare: boolean;
   created_at: string;
 }
 

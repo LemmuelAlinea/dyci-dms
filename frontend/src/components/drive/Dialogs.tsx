@@ -12,6 +12,7 @@ import { api } from '@/lib/api';
 import { createFolder, renameFile } from '@/lib/drive';
 import { ROLE_LABEL, type FileItem } from '@/lib/types';
 import { useAuth } from '@/store/auth';
+import { isEditableKind } from '@/lib/utils';
 
 export function NewFolderDialog({
   open,
@@ -89,6 +90,10 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [access, setAccess] = useState<'view' | 'edit'>('view');
+  const [canDownload, setCanDownload] = useState(true);
+  const [canReshare, setCanReshare] = useState(false);
+  const editable = isEditableKind(file.kind);
   const { data: members, isLoading } = useQuery({ queryKey: ['members', orgId], queryFn: () => listMembers(orgId), enabled: open });
 
   const others = (members ?? []).filter((m) => m.user_id !== userId);
@@ -107,7 +112,12 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
     if (!selected.size) return toast.error('Select at least one member');
     setBusy(true);
     try {
-      for (const uid of selected) await shareFileWithMember(orgId, file.id, uid, 'download');
+      for (const uid of selected)
+        await shareFileWithMember(orgId, file.id, uid, {
+          access: editable ? access : 'view',
+          canDownload,
+          canReshare,
+        });
       await notifyUsers([...selected], {
         type: 'share',
         title: 'A file was shared with you',
@@ -176,6 +186,42 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
                   </label>
                 ))}
               </div>
+              <div className="mt-4 space-y-3 border-t border-slate-100 pt-3 dark:border-white/10">
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Access level</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAccess('view')}
+                      className={access === 'view' ? 'btn-primary flex-1' : 'btn-outline flex-1'}
+                    >
+                      Can view
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!editable}
+                      onClick={() => setAccess('edit')}
+                      title={editable ? '' : 'Editing is available for Word, Excel and PowerPoint files only'}
+                      className={`flex-1 ${access === 'edit' ? 'btn-primary' : 'btn-outline'} disabled:cursor-not-allowed disabled:opacity-50`}
+                    >
+                      Can edit
+                    </button>
+                  </div>
+                  {!editable && (
+                    <p className="mt-1 text-[11px] text-slate-400">Editing is available for Word, Excel and PowerPoint files only.</p>
+                  )}
+                </div>
+
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={canDownload} onChange={(e) => setCanDownload(e.target.checked)} />
+                  Allow download
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={canReshare} onChange={(e) => setCanReshare(e.target.checked)} />
+                  Allow re-sharing with other members
+                </label>
+              </div>
+
               <button onClick={shareWithSelected} disabled={busy || selected.size === 0} className="btn-primary mt-4 w-full">
                 {busy ? (
                   <Spinner className="h-4 w-4" />

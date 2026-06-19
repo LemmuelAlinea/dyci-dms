@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { OrgMembership, OrgRole, Profile } from './types';
+import type { OrgMembership, OrgRole, Profile, ShareOptions } from './types';
 
 export async function listMembers(orgId: string): Promise<OrgMembership[]> {
   // organization_members has two FKs to profiles (user_id, invited_by), so the
@@ -21,12 +21,6 @@ export async function updateMemberRole(membershipId: string, role: OrgRole) {
 export async function removeMember(membershipId: string) {
   const { error } = await supabase.from('organization_members').delete().eq('id', membershipId);
   if (error) throw error;
-}
-
-export interface ShareOptions {
-  access: 'view' | 'edit';
-  canDownload: boolean;
-  canReshare: boolean;
 }
 
 export async function shareFileWithMember(

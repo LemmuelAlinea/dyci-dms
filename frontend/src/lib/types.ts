@@ -172,10 +172,16 @@ export interface Share {
   target_id: string;
   shared_by: string;
   shared_with_user_id: string | null;
-  permission: 'view' | 'edit' | 'download';
+  permission: 'view' | 'edit' | 'download'; // 'download' is a legacy value (pre-migration 0011); shareFileWithMember only ever writes 'view' | 'edit'
   can_download: boolean;
   can_reshare: boolean;
   created_at: string;
+}
+
+export interface ShareOptions {
+  access: 'view' | 'edit';
+  canDownload: boolean;
+  canReshare: boolean;
 }
 
 export const ROLE_LABEL: Record<OrgRole, string> = {

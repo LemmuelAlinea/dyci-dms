@@ -8,7 +8,14 @@ alter table public.shares
 
 -- Widen the permission CHECK to include 'edit'.
 -- (The inline CHECK from schema.sql is auto-named shares_permission_check.)
-alter table public.shares drop constraint if exists shares_permission_check;
+do $$ begin
+  if exists (
+    select 1 from pg_constraint
+    where conname = 'shares_permission_check' and conrelid = 'public.shares'::regclass
+  ) then
+    alter table public.shares drop constraint shares_permission_check;
+  end if;
+end $$;
 alter table public.shares
   add constraint shares_permission_check check (permission in ('view','edit','download'));
 

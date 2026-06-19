@@ -76,18 +76,25 @@ export function randomId(): string {
   return crypto.randomUUID();
 }
 
-export type PreviewCategory = 'pdf' | 'image' | 'office' | 'text' | 'none';
+export type PreviewCategory = 'pdf' | 'image' | 'word' | 'excel' | 'text' | 'none';
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'];
 const TEXT_EXT = ['txt', 'csv', 'md', 'markdown', 'json', 'log'];
 
-/** Decide how to preview a file from its name + kind. */
+/** Decide how to preview a file from its name + kind.
+ *  - 'pdf'   → iframe renderer
+ *  - 'image' → <img> renderer
+ *  - 'text'  → <pre> renderer (csv uses CsvTable; stays here, NOT excel)
+ *  - 'word'  → docx-preview renderer (.docx / .doc)
+ *  - 'excel' → SheetJS renderer (.xlsx / .xls)   note: .csv stays 'text'
+ *  - 'none'  → download-fallback card (covers .pptx + unknown types)
+ */
 export function previewCategory(fileName: string, kind: string): PreviewCategory {
   const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
   if (kind === 'pdf' || ext === 'pdf') return 'pdf';
   if (IMAGE_EXT.includes(ext)) return 'image';
   if (TEXT_EXT.includes(ext)) return 'text';
-  // 'office' has no inline renderer yet (FilePreview shows the download fallback); OnlyOffice viewer added later.
-  if (kind === 'docx' || kind === 'xlsx' || kind === 'pptx') return 'office';
+  if (ext === 'docx' || ext === 'doc' || kind === 'docx') return 'word';
+  if (ext === 'xlsx' || ext === 'xls') return 'excel';
   return 'none';
 }

@@ -176,7 +176,7 @@ export interface Share {
   created_at: string;
 }
 
-export type SharedFileItem = FileItem & { _share?: { permission: string } };
+export type SharedFileItem = FileItem & { _share?: { permission: string; can_download?: boolean } };
 
 export const ROLE_LABEL: Record<OrgRole, string> = {
   admin: 'Admin',

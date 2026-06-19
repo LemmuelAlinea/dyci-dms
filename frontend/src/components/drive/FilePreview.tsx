@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Download } from 'lucide-react';
 import { signedUrlForVersion } from '@/lib/drive';
@@ -11,8 +11,18 @@ export function FilePreview({ file, canDownload = true }: { file: FileItem; canD
   const category = previewCategory(file.name, file.kind);
   const [url, setUrl] = useState<string | null>(null);
   const [text, setText] = useState<string | null>(null);
-  const [loading, setLoading] = useState(category === 'pdf' || category === 'image' || category === 'text');
+  const [loading, setLoading] = useState(
+    category === 'pdf' || category === 'image' || category === 'text',
+  );
 
+  const wordRef = useRef<HTMLDivElement>(null);
+  const excelRef = useRef<HTMLDivElement>(null);
+  // Separate loading state for word/excel so the ref-holding divs stay mounted.
+  const [binaryLoading, setBinaryLoading] = useState(
+    category === 'word' || category === 'excel',
+  );
+
+  // Fetch url/text for pdf, image, and text categories only.
   useEffect(() => {
     let active = true;
     setUrl(null);
@@ -36,8 +46,79 @@ export function FilePreview({ file, canDownload = true }: { file: FileItem; canD
     return () => { active = false; };
   }, [file.id, file.current_version, category]);
 
+  // Word renderer via docx-preview.
+  useEffect(() => {
+    if (category !== 'word') return;
+    let active = true;
+    setBinaryLoading(true);
+    signedUrlForVersion(file.id, file.current_version)
+      .then((u) => fetch(u))
+      .then((r) => r.arrayBuffer())
+      .then(async (buf) => {
+        if (!active || !wordRef.current) return;
+        const { renderAsync } = await import('docx-preview');
+        wordRef.current.innerHTML = '';
+        await renderAsync(buf, wordRef.current);
+      })
+      .catch((e) => { if (active) toast.error((e as Error).message); })
+      .finally(() => { if (active) setBinaryLoading(false); });
+    return () => { active = false; };
+  }, [file.id, file.current_version, category]);
+
+  // Excel renderer via SheetJS.
+  useEffect(() => {
+    if (category !== 'excel') return;
+    let active = true;
+    setBinaryLoading(true);
+    signedUrlForVersion(file.id, file.current_version)
+      .then((u) => fetch(u))
+      .then((r) => r.arrayBuffer())
+      .then(async (buf) => {
+        if (!active || !excelRef.current) return;
+        const XLSX = await import('xlsx');
+        const wb = XLSX.read(buf, { type: 'array' });
+        const first = wb.SheetNames[0];
+        const html = first ? XLSX.utils.sheet_to_html(wb.Sheets[first]) : '<p>Empty workbook</p>';
+        excelRef.current.innerHTML = html;
+      })
+      .catch((e) => { if (active) toast.error((e as Error).message); })
+      .finally(() => { if (active) setBinaryLoading(false); });
+    return () => { active = false; };
+  }, [file.id, file.current_version, category]);
+
   const download = async () =>
     window.open(await signedUrlForVersion(file.id, file.current_version, true), '_blank');
+
+  // Word and Excel: always mount the ref-holding div so effects can write into it.
+  // Show a spinner overlay while binaryLoading is true.
+  if (category === 'word') {
+    return (
+      <div className="relative">
+        {binaryLoading && (
+          <div className="absolute inset-0 z-10 grid place-items-center bg-white/70">
+            <Spinner className="h-7 w-7" />
+          </div>
+        )}
+        <div ref={wordRef} className="max-h-[560px] overflow-auto bg-white p-4" />
+      </div>
+    );
+  }
+
+  if (category === 'excel') {
+    return (
+      <div className="relative">
+        {binaryLoading && (
+          <div className="absolute inset-0 z-10 grid place-items-center bg-white/70">
+            <Spinner className="h-7 w-7" />
+          </div>
+        )}
+        <div
+          ref={excelRef}
+          className="max-h-[560px] overflow-auto bg-white p-2 text-xs [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:px-2 [&_td]:py-1"
+        />
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className="grid place-items-center py-20"><Spinner className="h-7 w-7" /></div>;

@@ -9,10 +9,9 @@ import { listMembers, shareFileWithMember } from '@/lib/org';
 import { approverChoices, createApprovalRequest, getApprovalPlan, type PlanStep } from '@/lib/approvals';
 import { notifyUsers } from '@/lib/notify';
 import { api } from '@/lib/api';
-import { createFolder, renameFile, myShareForFile } from '@/lib/drive';
+import { createFolder, renameFile } from '@/lib/drive';
 import { ROLE_LABEL, type FileItem } from '@/lib/types';
 import { useAuth } from '@/store/auth';
-import { isEditableKind } from '@/lib/utils';
 
 export function NewFolderDialog({
   open,
@@ -90,18 +89,7 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [access, setAccess] = useState<'view' | 'edit'>('view');
-  const [canDownload, setCanDownload] = useState(true);
-  const [grantReshare, setGrantReshare] = useState(false);
-  const editable = isEditableKind(file.kind);
-  const isOwner = file.owner_id === userId;
-  const { data: myShare, isLoading: isLoadingMyShare } = useQuery({
-    queryKey: ['myShare', file.id, userId],
-    queryFn: () => myShareForFile(file.id, userId!),
-    enabled: open && !isOwner && !!userId,
-  });
-  const mayReshareFile = isOwner || myShare?.can_reshare === true;
-  const canGrantEdit = isOwner;
+  const [tier, setTier] = useState<'view' | 'download' | 'edit'>('view');
   const { data: members, isLoading } = useQuery({ queryKey: ['members', orgId], queryFn: () => listMembers(orgId), enabled: open });
 
   const others = (members ?? []).filter((m) => m.user_id !== userId);
@@ -121,11 +109,7 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
     setBusy(true);
     try {
       for (const uid of selected)
-        await shareFileWithMember(orgId, file.id, uid, {
-          access: canGrantEdit && editable ? access : 'view',
-          canDownload,
-          canReshare: isOwner ? grantReshare : false,
-        });
+        await shareFileWithMember(orgId, file.id, uid, tier);
       await notifyUsers([...selected], {
         type: 'share',
         title: 'A file was shared with you',
@@ -134,9 +118,7 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
       });
       toast.success(`Shared with ${selected.size} member${selected.size > 1 ? 's' : ''}`);
       setSelected(new Set());
-      setAccess('view');
-      setCanDownload(true);
-      setGrantReshare(false);
+      setTier('view');
       onClose();
     } catch (e) {
       toast.error((e as Error).message);
@@ -175,11 +157,7 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
 
       {tab === 'members' ? (
         <div>
-          {!isOwner && isLoadingMyShare ? (
-            <div className="grid place-items-center py-6"><Spinner /></div>
-          ) : !mayReshareFile ? (
-            <p className="text-sm text-slate-500">You don't have permission to share this file with others.</p>
-          ) : isLoading ? (
+          {isLoading ? (
             <div className="grid place-items-center py-6"><Spinner /></div>
           ) : others.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-400">No other members in this office yet.</p>
@@ -201,42 +179,22 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
                   </label>
                 ))}
               </div>
-              <div className="mt-4 space-y-3 border-t border-slate-100 pt-3 dark:border-white/10">
-                <div>
-                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Access level</p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setAccess('view')}
-                      className={access === 'view' ? 'btn-primary flex-1' : 'btn-outline flex-1'}
-                    >
-                      Can view
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!editable || !canGrantEdit}
-                      onClick={() => setAccess('edit')}
-                      title={!editable ? 'Editing is available for Word, Excel and PowerPoint files only' : !canGrantEdit ? 'Only the file owner can grant edit access' : undefined}
-                      className={`${access === 'edit' ? 'btn-primary' : 'btn-outline'} flex-1 disabled:cursor-not-allowed disabled:opacity-50`}
-                    >
-                      Can edit
-                    </button>
-                  </div>
-                  {!editable && (
-                    <p className="mt-1 text-[11px] text-slate-400">Editing is available for Word, Excel and PowerPoint files only.</p>
-                  )}
-                </div>
 
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={canDownload} onChange={(e) => setCanDownload(e.target.checked)} className="h-4 w-4 accent-navy-700" />
-                  Allow download
-                </label>
-                {isOwner && (
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={grantReshare} onChange={(e) => setGrantReshare(e.target.checked)} className="h-4 w-4 accent-navy-700" />
-                    Allow re-sharing with other members
+              <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 dark:border-white/10">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Recipient access</p>
+                {([
+                  ['view', 'View only', 'Can open and read it in the browser. No download.'],
+                  ['download', 'Download', 'Can view and download. Cannot upload a new version.'],
+                  ['edit', 'Edit', 'Can download and upload a new version (saved to your document).'],
+                ] as const).map(([val, label, desc]) => (
+                  <label key={val} className="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 p-2 dark:border-white/10">
+                    <input type="radio" name="share-tier" className="mt-1 accent-navy-700" checked={tier === val} onChange={() => setTier(val)} />
+                    <span>
+                      <span className="block text-sm font-medium text-navy-900 dark:text-white">{label}</span>
+                      <span className="block text-[11px] text-slate-400">{desc}</span>
+                    </span>
                   </label>
-                )}
+                ))}
               </div>
 
               <button onClick={shareWithSelected} disabled={busy || selected.size === 0} className="btn-primary mt-4 w-full">

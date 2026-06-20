@@ -189,9 +189,11 @@ export function FileDetailPage() {
                   <Download size={16} /> Download
                 </button>
               )}
-              <button onClick={() => setShare(true)} className="btn-outline">
-                <Share2 size={16} /> Share / Send
-              </button>
+              {isOwner && (
+                <button onClick={() => setShare(true)} className="btn-outline">
+                  <Share2 size={16} /> Share / Send
+                </button>
+              )}
               {canRequestApproval && (
                 <button onClick={() => setApprove(true)} className="btn-primary">
                   <Send size={16} /> Request approval

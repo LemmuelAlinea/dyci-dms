@@ -42,6 +42,7 @@ export function DocTypeEditor({
   const [categoryId, setCategoryId] = useState<string>('');
   const [referenceFormat, setReferenceFormat] = useState('DOC-{YYYY}-{seq}');
   const [publishable, setPublishable] = useState(true);
+  const [allowMultiple, setAllowMultiple] = useState(false);
   const [active, setActive] = useState(true);
   const [fields, setFields] = useState<FieldDef[]>([]);
   const [steps, setSteps] = useState<string[]>([]);
@@ -53,6 +54,7 @@ export function DocTypeEditor({
     setCategoryId(docType?.category_id ?? categories[0]?.id ?? '');
     setReferenceFormat(docType?.reference_format ?? 'DOC-{YYYY}-{seq}');
     setPublishable(docType?.publishable ?? true);
+    setAllowMultiple(docType?.allow_multiple ?? false);
     setActive(docType?.active ?? true);
     setFields(docType?.fields ? JSON.parse(JSON.stringify(docType.fields)) : []);
     if (docType) {
@@ -92,7 +94,7 @@ export function DocTypeEditor({
 
     setBusy(true);
     try {
-      const input = { name: name.trim(), category_id: categoryId || null, reference_format: referenceFormat.trim(), publishable, active, fields: finalFields };
+      const input = { name: name.trim(), category_id: categoryId || null, reference_format: referenceFormat.trim(), publishable, allow_multiple: allowMultiple, active, fields: finalFields };
       let id = docType?.id;
       if (editing) {
         await updateDocumentType(docType!.id, input);
@@ -164,6 +166,10 @@ export function DocTypeEditor({
             <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
               <input type="checkbox" checked={publishable} onChange={(e) => setPublishable(e.target.checked)} className="h-4 w-4 accent-navy-700" />
               Can be released to the office feed
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+              <input type="checkbox" checked={allowMultiple} onChange={(e) => setAllowMultiple(e.target.checked)} className="h-4 w-4 accent-navy-700" />
+              Accept multiple file uploads
             </label>
             <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
               <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="h-4 w-4 accent-navy-700" />

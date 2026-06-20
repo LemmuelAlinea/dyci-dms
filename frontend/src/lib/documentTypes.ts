@@ -19,6 +19,7 @@ export interface DocumentType {
   color: string;
   reference_format: string;
   publishable: boolean;
+  allow_multiple: boolean;
   fields: FieldDef[];
   active: boolean;
   sort: number;

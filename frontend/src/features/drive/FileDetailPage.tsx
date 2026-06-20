@@ -11,12 +11,15 @@ import {
   History,
   MessageSquare,
   Megaphone,
+  Paperclip,
+  Plus,
   Send,
   Share2,
   Trash2,
+  X,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { addFileComment, listFileComments, listVersions, myShareForFile, setFileState, signedUrlForVersion, uploadNewVersion } from '@/lib/drive';
+import { addAttachment, addFileComment, listAttachments, listFileComments, listVersions, myShareForFile, removeAttachment, setFileState, signedUrlForAttachment, signedUrlForVersion, uploadNewVersion } from '@/lib/drive';
 import { api } from '@/lib/api';
 import { getDocumentType } from '@/lib/documentTypes';
 import { getLatestRequestForFile, getRequestSteps, releaseFile } from '@/lib/approvals';
@@ -29,7 +32,7 @@ import { FileKindIcon } from '@/components/ui/FileKindIcon';
 import { ConfirmDialog, RequestApprovalDialog, ShareDialog } from '@/components/drive/Dialogs';
 import { FilePreview } from '@/components/drive/FilePreview';
 import { useAuth } from '@/store/auth';
-import type { FileComment, FileItem } from '@/lib/types';
+import type { FileAttachment, FileComment, FileItem } from '@/lib/types';
 
 const OWNER = 'owner:profiles!files_owner_id_fkey(*)';
 const APPROVER = 'approver:profiles!files_approved_by_fkey(*)';
@@ -41,6 +44,7 @@ export function FileDetailPage() {
   const { currentOrgId, session } = useAuth();
   const userId = session?.user.id;
   const fileInput = useRef<HTMLInputElement>(null);
+  const attachInput = useRef<HTMLInputElement>(null);
 
   const [share, setShare] = useState(false);
   const [approve, setApprove] = useState(false);
@@ -80,9 +84,29 @@ export function FileDetailPage() {
     enabled: !!id && !!userId && !isFileOwner,
   });
 
+  const { data: attachments } = useQuery({ queryKey: ['attachments', id], queryFn: () => listAttachments(id!), enabled: !!id });
+
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['file', id] });
     qc.invalidateQueries({ queryKey: ['versions', id] });
+    qc.invalidateQueries({ queryKey: ['attachments', id] });
+  };
+
+  const onAddAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f || !file) return;
+    if (!docType?.allow_multiple) return toast.error('This document type accepts one file only');
+    setBusy(true);
+    try {
+      await addAttachment(file, f);
+      toast.success('Attachment added');
+      refresh();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+      if (attachInput.current) attachInput.current.value = '';
+    }
   };
 
   const [commentBody, setCommentBody] = useState('');
@@ -129,6 +153,8 @@ export function FileDetailPage() {
   const canDownload = isOwner || perm === 'download' || perm === 'edit';
   const canUpload = (isOwner || perm === 'edit') && (file.status === 'draft' || file.status === 'rejected');
   const canComment = isOwner || perm === 'comment' || perm === 'edit';
+  const hasRevisionAfterRejection = file.status === 'rejected' && request ? file.current_version > request.version_no : false;
+  const canRequestApproval = isOwner && (file.status === 'draft' || hasRevisionAfterRejection);
 
   return (
     <div>
@@ -166,7 +192,7 @@ export function FileDetailPage() {
               <button onClick={() => setShare(true)} className="btn-outline">
                 <Share2 size={16} /> Share / Send
               </button>
-              {isOwner && (file.status === 'draft' || file.status === 'rejected') && (
+              {canRequestApproval && (
                 <button onClick={() => setApprove(true)} className="btn-primary">
                   <Send size={16} /> Request approval
                 </button>
@@ -243,6 +269,21 @@ export function FileDetailPage() {
             )}
           </div>
 
+          {isOwner && file.status === 'rejected' && (
+            <div className="card border-l-4 border-rose-500 bg-rose-50/50 p-5 dark:bg-rose-500/10">
+              <p className="font-display text-sm font-bold text-rose-700 dark:text-rose-300">This document was rejected</p>
+              <p className="mt-1 text-sm text-rose-600/90 dark:text-rose-300/80">Revise it and resubmit — upload a new version, then request approval again. No need to create a new document.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button onClick={() => fileInput.current?.click()} className="btn-outline" disabled={busy}>
+                  {busy ? <Spinner className="h-4 w-4" /> : <FileUp size={16} />} Upload new version
+                </button>
+                <button onClick={() => setApprove(true)} className="btn-primary" disabled={!canRequestApproval}>
+                  <Send size={16} /> Request approval again
+                </button>
+              </div>
+            </div>
+          )}
+
           {reqSteps && reqSteps.length > 0 && (
             <div className="card p-5">
               <h3 className="mb-3 font-display text-sm font-bold text-navy-900 dark:text-white">Approval progress</h3>
@@ -257,6 +298,51 @@ export function FileDetailPage() {
             </div>
             <FilePreview file={file} canDownload={canDownload} />
           </div>
+
+          {/* Attachments */}
+          {(docType?.allow_multiple || (attachments ?? []).length > 0) && (
+            <div className="card p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="flex items-center gap-2 font-display text-sm font-bold text-navy-900 dark:text-white">
+                  <Paperclip size={16} /> Attachments
+                </h3>
+                {isOwner && docType?.allow_multiple && (
+                  <>
+                    <input ref={attachInput} type="file" hidden onChange={onAddAttachment} />
+                    <button onClick={() => attachInput.current?.click()} className="btn-outline !py-1 !text-xs" disabled={busy}>
+                      <Plus size={13} /> Add file
+                    </button>
+                  </>
+                )}
+              </div>
+              {(attachments ?? []).length === 0 ? (
+                <p className="text-sm text-slate-400">No attachments yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {(attachments ?? []).map((a: FileAttachment) => (
+                    <div key={a.id} className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2 dark:border-white/10">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-navy-900 dark:text-white">{a.name}</p>
+                        <p className="text-[11px] text-slate-400">{formatBytes(a.size_bytes)}</p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {canDownload && (
+                          <button onClick={async () => window.open(await signedUrlForAttachment(a, true), '_blank')} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-navy-700 dark:hover:bg-white/10" title="Download">
+                            <Download size={15} />
+                          </button>
+                        )}
+                        {isOwner && (
+                          <button onClick={() => setConfirm({ title: 'Remove attachment?', desc: `"${a.name}" will be permanently removed.`, danger: true, label: 'Remove', run: async () => { await removeAttachment(a); toast.success('Removed'); refresh(); } })} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10" title="Remove">
+                            <X size={15} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Comments */}
           <div className="card p-5">

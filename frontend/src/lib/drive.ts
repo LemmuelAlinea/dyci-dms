@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { kindFromFile, randomId } from './utils';
-import type { FileComment, FileItem, FileVersion, Folder, NodeState, SharedFileItem } from './types';
+import type { FileAttachment, FileComment, FileItem, FileVersion, Folder, NodeState, SharedFileItem } from './types';
 
 const BUCKET = 'documents';
 
@@ -235,6 +235,49 @@ export async function permanentlyDeleteFile(file: FileItem) {
 
 export async function renameFile(fileId: string, name: string) {
   await supabase.from('files').update({ name }).eq('id', fileId);
+}
+
+// ── Attachments (flat extra files for multi-file document types) ──────────────
+export async function listAttachments(fileId: string): Promise<FileAttachment[]> {
+  const { data, error } = await supabase
+    .from('file_attachments')
+    .select('*')
+    .eq('file_id', fileId)
+    .order('created_at');
+  if (error) throw error;
+  return (data as FileAttachment[]) ?? [];
+}
+
+export async function addAttachment(file: FileItem, blob: File): Promise<void> {
+  const userId = (await supabase.auth.getUser()).data.user?.id;
+  if (!userId) throw new Error('Sign in to add attachments');
+  const path = `${file.org_id}/${file.owner_id}/${file.id}/att-${randomId()}.${ext(blob.name)}`;
+  const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, blob);
+  if (upErr) throw upErr;
+  const { error } = await supabase.from('file_attachments').insert({
+    file_id: file.id,
+    org_id: file.org_id,
+    name: blob.name,
+    storage_path: path,
+    size_bytes: blob.size,
+    mime: blob.type,
+    uploaded_by: userId,
+  });
+  if (error) throw error;
+}
+
+export async function removeAttachment(att: FileAttachment): Promise<void> {
+  await supabase.storage.from(BUCKET).remove([att.storage_path]);
+  const { error } = await supabase.from('file_attachments').delete().eq('id', att.id);
+  if (error) throw error;
+}
+
+export async function signedUrlForAttachment(att: FileAttachment, download = false): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(att.storage_path, 600, download ? { download: true } : undefined);
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 // ── File Comments ─────────────────────────────────────────────────────────────

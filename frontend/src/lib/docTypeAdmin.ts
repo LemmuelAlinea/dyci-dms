@@ -49,6 +49,7 @@ export interface DocTypeInput {
   category_id: string | null;
   reference_format: string;
   publishable: boolean;
+  allow_multiple: boolean;
   active: boolean;
   fields: FieldDef[];
 }

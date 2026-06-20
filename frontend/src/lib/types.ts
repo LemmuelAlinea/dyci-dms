@@ -145,6 +145,18 @@ export interface ApprovalRequest {
 
 export interface ApproverOffice { id: string; code: string; name: string; has_approver: boolean }
 
+export interface FileAttachment {
+  id: string;
+  file_id: string;
+  org_id: string;
+  name: string;
+  storage_path: string;
+  size_bytes: number;
+  mime: string | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
 export interface ApprovalStep {
   id: string;
   request_id: string;

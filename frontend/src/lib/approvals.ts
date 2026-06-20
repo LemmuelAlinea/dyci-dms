@@ -67,7 +67,7 @@ export async function createApprovalRequest(
 ): Promise<void> {
   // Create the request + step assignments + set the file pending atomically,
   // server-side (SECURITY DEFINER), to avoid brittle client-side insert RLS.
-  const { error } = await supabase.rpc('request_approval', {
+  const { data: reqId, error } = await supabase.rpc('request_approval', {
     p_file: file.id,
     p_message: message,
     p_assignees: assignments.map((a) => ({
@@ -84,7 +84,7 @@ export async function createApprovalRequest(
       type: 'approval',
       title: 'New approval request',
       body: file.name,
-      link: '/app/approvals',
+      link: reqId ? `/app/approvals?request=${reqId}` : '/app/approvals',
     });
   }
 }
@@ -138,6 +138,15 @@ export async function getRequestSteps(requestId: string): Promise<ApprovalStep[]
   return (data as ApprovalStep[]) ?? [];
 }
 
+export async function getRequestById(requestId: string): Promise<ApprovalRequest | null> {
+  const { data } = await supabase
+    .from('approval_requests')
+    .select(`*, ${FILES}, ${REQ}`)
+    .eq('id', requestId)
+    .maybeSingle();
+  return (data as ApprovalRequest) ?? null;
+}
+
 export async function getLatestRequestForFile(fileId: string): Promise<ApprovalRequest | null> {
   const { data } = await supabase
     .from('approval_requests')
@@ -163,16 +172,16 @@ export async function decideApprovalStep(
 
   const fileName = request.files?.name ?? 'A document';
   if (decision === 'rejected') {
-    await notifyUsers([request.requester_id], { type: 'approval', title: 'Your document was rejected', body: fileName, link: '/app/approvals' });
+    await notifyUsers([request.requester_id], { type: 'approval', title: 'Your document was rejected', body: fileName, link: `/app/file/${request.file_id}` });
     return;
   }
   // Approved: notify the next pending approver, or the requester if finished.
   const steps = await getRequestSteps(request.id);
   const nextPending = steps.find((s) => s.status === 'pending');
   if (nextPending?.assignee_id) {
-    await notifyUsers([nextPending.assignee_id], { type: 'approval', title: 'New approval request', body: fileName, link: '/app/approvals' });
+    await notifyUsers([nextPending.assignee_id], { type: 'approval', title: 'New approval request', body: fileName, link: `/app/approvals?request=${request.id}` });
   } else {
-    await notifyUsers([request.requester_id], { type: 'approval', title: 'Your document was approved', body: fileName, link: '/app/approvals' });
+    await notifyUsers([request.requester_id], { type: 'approval', title: 'Your document was approved', body: fileName, link: `/app/approvals?request=${request.id}` });
   }
 }
 
@@ -205,5 +214,5 @@ export async function releaseFile(file: FileItem): Promise<void> {
     .eq('org_id', file.org_id)
     .eq('status', 'active');
   const recipients = (members ?? []).map((m) => m.user_id).filter((id) => id !== file.owner_id);
-  await notifyUsers(recipients, { type: 'release', title: 'New released paper', body: file.name, link: '/app/released' });
+  await notifyUsers(recipients, { type: 'release', title: 'New released paper', body: file.name, link: `/app/file/${file.id}` });
 }

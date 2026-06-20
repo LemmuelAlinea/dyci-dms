@@ -114,7 +114,7 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
         type: 'share',
         title: 'A file was shared with you',
         body: file.name,
-        link: '/app/shared',
+        link: `/app/file/${file.id}`,
       });
       toast.success(`Shared with ${selected.size} member${selected.size > 1 ? 's' : ''}`);
       setSelected(new Set());

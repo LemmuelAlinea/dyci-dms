@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, Check } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -10,6 +11,7 @@ import type { NotificationItem } from '@/lib/types';
 export function NotificationsBell() {
   const userId = useAuth((s) => s.session?.user.id);
   const prefs = useAuth((s) => s.profile?.notif_prefs);
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const ref = useRef<HTMLDivElement>(null);
@@ -60,6 +62,15 @@ export function NotificationsBell() {
     void load();
   };
 
+  const openItem = async (n: NotificationItem) => {
+    setOpen(false);
+    if (!n.read) {
+      await supabase.from('notifications').update({ read: true }).eq('id', n.id);
+      void load();
+    }
+    if (n.link) navigate(n.link);
+  };
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -97,7 +108,8 @@ export function NotificationsBell() {
                 visible.map((n) => (
                   <div
                     key={n.id}
-                    className={`border-b border-slate-50 px-4 py-3 last:border-0 dark:border-white/5 ${
+                    onClick={() => openItem(n)}
+                    className={`cursor-pointer border-b border-slate-50 px-4 py-3 last:border-0 hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/10 ${
                       !n.read ? 'bg-navy-50/50 dark:bg-white/5' : ''
                     }`}
                   >

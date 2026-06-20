@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -16,6 +16,7 @@ import { ConfirmDialog } from '@/components/drive/Dialogs';
 import {
   addRequestComment,
   decideApprovalStep,
+  getRequestById,
   getRequestSteps,
   listMyRequests,
   listRequestComments,
@@ -31,6 +32,23 @@ export function ApprovalsPage() {
   const [active, setActive] = useState<ApprovalRequest | null>(null);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+
+  const [params, setParams] = useSearchParams();
+
+  useEffect(() => {
+    const rid = params.get('request');
+    if (!rid) return;
+    getRequestById(rid).then((r) => { if (r) setActive(r); });
+  }, [params]);
+
+  const closeDetail = () => {
+    setActive(null);
+    if (params.get('request')) {
+      const next = new URLSearchParams(params);
+      next.delete('request');
+      setParams(next, { replace: true });
+    }
+  };
 
   const review = useQuery({ queryKey: ['toReview', userId], queryFn: () => listToReview(userId) });
   const requests = useQuery({ queryKey: ['myRequests', userId], queryFn: () => listMyRequests(userId) });
@@ -104,7 +122,7 @@ export function ApprovalsPage() {
         </div>
       )}
 
-      {active && <ApprovalDetail request={active} userId={userId} onClose={() => setActive(null)} />}
+      {active && <ApprovalDetail request={active} userId={userId} onClose={closeDetail} />}
     </div>
   );
 }

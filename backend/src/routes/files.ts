@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import multer from 'multer';
 import { supabaseAdmin } from '../lib/supabaseAdmin.js';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
@@ -15,6 +16,25 @@ export function canUploadVersion(p: { isOwner: boolean; sharePermission: string 
   return allowed && editableStatus;
 }
 
+const PERM_RANK: Record<string, number> = { view: 1, comment: 2, download: 3, edit: 4 };
+
+/** Best permission the user holds on the folder or any ancestor (service-role walk). */
+async function folderInheritedPerm(folderId: string | null, userId: string): Promise<string | null> {
+  let current = folderId;
+  let best: string | null = null;
+  let guard = 0;
+  while (current && guard++ < 50) {
+    const [{ data: folder }, { data: share }] = await Promise.all([
+      supabaseAdmin.from('folders').select('parent_id').eq('id', current).maybeSingle(),
+      supabaseAdmin.from('shares').select('permission').eq('target_type', 'folder').eq('target_id', current).eq('shared_with_user_id', userId).maybeSingle(),
+    ]);
+    const p = share?.permission as string | undefined;
+    if (p && (!best || PERM_RANK[p] > PERM_RANK[best])) best = p;
+    current = folder?.parent_id ?? null;
+  }
+  return best;
+}
+
 filesRouter.post('/:fileId/version', requireAuth, upload.single('file'), async (req: AuthedRequest, res) => {
   const userId = req.user!.id;
   const { fileId } = req.params;
@@ -22,7 +42,7 @@ filesRouter.post('/:fileId/version', requireAuth, upload.single('file'), async (
   try {
     const { data: file } = await supabaseAdmin
       .from('files')
-      .select('id, org_id, owner_id, name, kind, status, current_version')
+      .select('id, org_id, owner_id, folder_id, name, kind, status, current_version')
       .eq('id', fileId)
       .single();
     if (!file) return res.status(404).json({ error: 'File not found' });
@@ -36,6 +56,11 @@ filesRouter.post('/:fileId/version', requireAuth, upload.single('file'), async (
         .eq('target_type', 'file').eq('target_id', fileId).eq('shared_with_user_id', userId)
         .maybeSingle();
       sharePermission = share?.permission ?? null;
+      // fall back to folder-inherited permission (shared folder grants edit recursively)
+      if (sharePermission !== 'edit') {
+        const inherited = await folderInheritedPerm(file.folder_id, userId);
+        if (inherited && (!sharePermission || PERM_RANK[inherited] > PERM_RANK[sharePermission])) sharePermission = inherited;
+      }
     }
 
     if (!(isOwner || sharePermission === 'edit')) {
@@ -90,5 +115,71 @@ filesRouter.post('/:fileId/version', requireAuth, upload.single('file'), async (
   } catch (e) {
     console.error('[files] version upload error', e);
     return res.status(400).json({ error: 'Could not upload the new version.' });
+  }
+});
+
+function kindFromName(name: string): string {
+  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  const map: Record<string, string> = { pdf: 'pdf', doc: 'docx', docx: 'docx', xls: 'xlsx', xlsx: 'xlsx', csv: 'xlsx', ppt: 'pptx', pptx: 'pptx' };
+  return map[ext] ?? 'other';
+}
+
+// Add a NEW file into a folder the caller owns or has folder-inherited 'edit' on.
+filesRouter.post('/folder/:folderId/add', requireAuth, upload.single('file'), async (req: AuthedRequest, res) => {
+  const userId = req.user!.id;
+  const { folderId } = req.params;
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  try {
+    const { data: folder } = await supabaseAdmin
+      .from('folders')
+      .select('id, org_id, owner_id, name')
+      .eq('id', folderId)
+      .single();
+    if (!folder) return res.status(404).json({ error: 'Folder not found' });
+
+    const isOwner = folder.owner_id === userId;
+    const perm = isOwner ? 'edit' : await folderInheritedPerm(folderId, userId);
+    if (perm !== 'edit') return res.status(403).json({ error: 'You do not have permission to add files to this folder.' });
+
+    const buffer = req.file.buffer;
+    const fileId = randomUUID();
+    const origExt = req.file.originalname.split('.').pop();
+    const ext = origExt && origExt.length <= 5 ? origExt.toLowerCase() : 'bin';
+    const contentType = req.file.mimetype || 'application/octet-stream';
+    const path = `${folder.org_id}/${folder.owner_id}/${fileId}/v1.${ext}`;
+
+    const { error: upErr } = await supabaseAdmin.storage.from(BUCKET).upload(path, buffer, { contentType, upsert: false });
+    if (upErr) {
+      console.error('[files] add-to-folder storage upload failed', folderId, upErr.message);
+      return res.status(500).json({ error: 'Upload failed' });
+    }
+    const { error: fErr } = await supabaseAdmin.from('files').insert({
+      id: fileId, org_id: folder.org_id, owner_id: folder.owner_id, folder_id: folderId,
+      name: req.file.originalname, mime: contentType, kind: kindFromName(req.file.originalname),
+      size_bytes: buffer.length, current_version: 1, status: 'draft',
+    });
+    if (fErr) {
+      console.error('[files] add-to-folder insert failed', folderId, fErr.message);
+      return res.status(500).json({ error: 'Could not add the file.' });
+    }
+    await supabaseAdmin.from('file_versions').insert({
+      file_id: fileId, version_no: 1, storage_path: path, size_bytes: buffer.length,
+      mime: contentType, uploaded_by: userId, note: 'Added to shared folder',
+    });
+    if (!isOwner) {
+      const { data: uploader } = await supabaseAdmin.from('profiles').select('full_name').eq('id', userId).single();
+      await supabaseAdmin.from('notifications').insert({
+        user_id: folder.owner_id, type: 'share', title: 'New file added to your folder',
+        body: `${uploader?.full_name ?? 'Someone'} added "${req.file.originalname}" to "${folder.name}"`,
+        link: `/app/folder/${folderId}`,
+      });
+    }
+    await supabaseAdmin.from('activity_log').insert({
+      org_id: folder.org_id, actor_id: userId, action: 'file.added_to_folder', entity: 'file', entity_id: fileId, meta: { folder_id: folderId },
+    });
+    return res.json({ fileId });
+  } catch (e) {
+    console.error('[files] add-to-folder error', e);
+    return res.status(400).json({ error: 'Could not add the file.' });
   }
 });

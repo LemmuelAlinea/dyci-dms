@@ -104,6 +104,20 @@ export const api = {
     if (!res.ok) throw new Error(json.error ?? `Upload failed (${res.status})`);
     return json as { version: number };
   },
+
+  addFileToFolder: async (folderId: string, file: File): Promise<{ fileId: string }> => {
+    if (!BASE) throw new Error('Backend API is not configured (VITE_API_URL is empty).');
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${BASE}/files/folder/${folderId}/add`, {
+      method: 'POST',
+      headers: { ...(await authHeader()) },
+      body: fd,
+    });
+    const json = (await res.json().catch(() => ({}))) as { fileId?: string; error?: string };
+    if (!res.ok) throw new Error(json.error ?? `Upload failed (${res.status})`);
+    return json as { fileId: string };
+  },
 };
 
 interface MiniProfile {

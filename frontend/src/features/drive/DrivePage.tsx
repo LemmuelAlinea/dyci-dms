@@ -56,6 +56,8 @@ export function DrivePage() {
   const [newFolder, setNewFolder] = useState(false);
   const [shareFile, setShareFile] = useState<FileItem | null>(null);
   const [approveFile, setApproveFile] = useState<FileItem | null>(null);
+  const [shareFolder, setShareFolder] = useState<Folder | null>(null);
+  const [approveFolder, setApproveFolder] = useState<Folder | null>(null);
   const [renameTarget, setRenameTarget] = useState<FileItem | null>(null);
   const [confirm, setConfirm] = useState<{ title: string; desc: string; danger?: boolean; run: () => Promise<void> } | null>(null);
 
@@ -152,6 +154,11 @@ export function DrivePage() {
   };
 
   const folderActions = (folder: Folder): ActionItem[] => [
+    { label: 'Open', icon: Info, onClick: () => navigate(`/app/folder/${folder.id}`) },
+    { label: 'Share / Send', icon: Share2, onClick: () => setShareFolder(folder) },
+    ...(folder.status !== 'pending' && folder.status !== 'approved'
+      ? [{ label: 'Request approval', icon: Send, onClick: () => setApproveFolder(folder) }]
+      : []),
     {
       label: 'Archive',
       icon: Archive,
@@ -264,6 +271,8 @@ export function DrivePage() {
       <NewFolderDialog open={newFolder} onClose={() => setNewFolder(false)} orgId={orgId} parentId={folderId} onCreated={refresh} />
       {shareFile && <ShareDialog open onClose={() => setShareFile(null)} file={shareFile} orgId={orgId} />}
       {approveFile && <RequestApprovalDialog open onClose={() => setApproveFile(null)} file={approveFile} orgId={orgId} onDone={refresh} />}
+      {shareFolder && <ShareDialog open onClose={() => setShareFolder(null)} folder={shareFolder} orgId={orgId} />}
+      {approveFolder && <RequestApprovalDialog open onClose={() => setApproveFolder(null)} folder={approveFolder} orgId={orgId} onDone={refresh} />}
       {renameTarget && <RenameDialog open onClose={() => setRenameTarget(null)} file={renameTarget} onDone={refresh} />}
       {confirm && (
         <ConfirmDialog

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
-import { Check, CheckSquare, Download, MessageSquare, Search, Send, X } from 'lucide-react';
+import { Check, CheckSquare, Download, FolderOpen, MessageSquare, Search, Send, X } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
@@ -131,11 +131,11 @@ function ApprovalRow({ request, side, onOpen }: { request: ApprovalRequest; side
   return (
     <div onClick={onOpen} className="card flex cursor-pointer items-center gap-4 p-4 transition hover:-translate-y-0.5 hover:shadow-card">
       <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-slate-50 dark:bg-white/5">
-        <FileKindIcon kind={request.files?.kind ?? 'other'} size={24} />
+        {request.folder_id ? <FolderOpen size={22} className="text-gold-500" /> : <FileKindIcon kind={request.files?.kind ?? 'other'} size={24} />}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-navy-900 dark:text-white">
-          {request.files?.name}
+          {request.files?.name ?? 'Folder approval'}
           {request.files?.reference_no && <span className="ml-2 font-mono text-[10px] text-navy-500 dark:text-gold-300">{request.files.reference_no}</span>}
         </p>
         <p className="text-[11px] text-slate-400">
@@ -188,16 +188,22 @@ function ApprovalDetail({ request, userId, onClose }: { request: ApprovalRequest
 
   return (
     <>
-    <Modal open onClose={onClose} title={request.files?.name} size="lg">
+    <Modal open onClose={onClose} title={request.files?.name ?? 'Folder approval'} size="lg">
       <div className="mb-4 flex items-center justify-between">
         <StatusBadge status={request.status === 'pending' ? 'pending' : request.status === 'approved' ? 'approved' : 'rejected'} />
         <div className="flex gap-2">
-          {!(request.target_org_id && request.requester_id !== userId) && (
-            <button onClick={async () => window.open(await signedUrlForVersion(request.file_id, request.version_no, true), '_blank')} className="btn-outline !py-1.5 !text-xs">
-              <Download size={14} /> Download
-            </button>
+          {request.folder_id ? (
+            <button onClick={() => navigate(`/app/folder/${request.folder_id}`)} className="btn-outline !py-1.5 !text-xs"><FolderOpen size={14} /> Open folder</button>
+          ) : (
+            <>
+              {!(request.target_org_id && request.requester_id !== userId) && (
+                <button onClick={async () => window.open(await signedUrlForVersion(request.file_id!, request.version_no, true), '_blank')} className="btn-outline !py-1.5 !text-xs">
+                  <Download size={14} /> Download
+                </button>
+              )}
+              <button onClick={() => navigate(`/app/file/${request.file_id}`)} className="btn-outline !py-1.5 !text-xs">Open file</button>
+            </>
           )}
-          <button onClick={() => navigate(`/app/file/${request.file_id}`)} className="btn-outline !py-1.5 !text-xs">Open file</button>
         </div>
       </div>
 

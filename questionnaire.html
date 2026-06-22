@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Document Manager System - Evaluation Questionnaire</title>
+<style>
+  @page { size: 8.5in 11in; margin: 0.6in 0.55in 0.55in 0.55in; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Calibri", "Segoe UI", Arial, sans-serif;
+    color: #1a1a1a;
+    font-size: 10.5pt;
+    line-height: 1.4;
+    margin: 0;
+  }
+  .header {
+    text-align: center;
+    border-bottom: 3px solid #1e2a78;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+  .header h1 {
+    color: #1e2a78;
+    font-size: 19pt;
+    margin: 0 0 2px 0;
+    letter-spacing: .5px;
+  }
+  .header .sub {
+    color: #c9991f;
+    font-weight: 600;
+    font-size: 11pt;
+    margin: 2px 0;
+  }
+  .header .std {
+    color: #555;
+    font-size: 9.5pt;
+    font-style: italic;
+  }
+  .info {
+    border: 1px solid #ccc;
+    border-left: 4px solid #eab02e;
+    background: #fafafa;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 10pt;
+  }
+  .info div { margin: 3px 0; }
+  .line { display: inline-block; border-bottom: 1px solid #888; min-width: 180px; }
+  .instructions { font-size: 10pt; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  .scale-legend td {
+    border: 1px solid #bbb; padding: 5px 8px; font-size: 9.5pt; vertical-align: top;
+  }
+  .scale-legend .num {
+    background: #1e2a78; color: #fff; font-weight: 700; text-align: center; width: 34px;
+  }
+  .section-title {
+    background: #1e2a78; color: #fff; font-weight: 700;
+    padding: 5px 10px; font-size: 10.5pt; margin-top: 10px;
+    border-radius: 2px;
+  }
+  .section-title .note { font-weight: 400; font-style: italic; font-size: 9pt; opacity: .9; }
+  .q-table th {
+    background: #eef0f7; color: #1e2a78; border: 1px solid #bbb;
+    padding: 4px; font-size: 9pt; text-align: center;
+  }
+  .q-table td { border: 1px solid #bbb; padding: 5px 7px; font-size: 10pt; vertical-align: middle; }
+  .q-table td.num { text-align: center; width: 26px; color: #555; }
+  .q-table td.box { width: 30px; text-align: center; }
+  .q-table th.box { width: 30px; }
+  thead { display: table-header-group; }
+  .section { page-break-inside: avoid; }
+  .interp td { border: 1px solid #bbb; padding: 5px 9px; font-size: 9.5pt; }
+  .interp th { background: #eef0f7; color: #1e2a78; border: 1px solid #bbb; padding: 5px; font-size: 9.5pt; }
+  .comments { margin-top: 10px; font-size: 10pt; }
+  .comments .cl { border-bottom: 1px solid #999; height: 18px; margin-top: 6px; }
+  h3.blk { color:#1e2a78; font-size: 11pt; margin: 14px 0 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>DOCUMENT MANAGER SYSTEM</h1>
+  <div class="sub">Software Quality Evaluation Questionnaire</div>
+  <div class="std">Based on ISO/IEC 25010:2023 — Product Quality Model</div>
+</div>
+
+<div class="info">
+  <div><strong>Name (optional):</strong> <span class="line" style="min-width:240px"></span></div>
+  <div><strong>Office / Organization:</strong> <span class="line" style="min-width:230px"></span></div>
+  <div><strong>Role:</strong> &nbsp; &#9744; System Admin &nbsp; &#9744; Org Admin &nbsp; &#9744; Co-Admin &nbsp; &#9744; Staff &nbsp; &#9744; Approver</div>
+  <div><strong>Date:</strong> <span class="line" style="min-width:160px"></span></div>
+</div>
+
+<div class="instructions">
+  <strong>Instructions:</strong> Please rate each statement about the Document Manager System by putting a check (&#10003;)
+  in the box that best reflects your experience, using the scale below.
+</div>
+
+<table class="scale-legend">
+  <tr>
+    <td class="num">4</td><td><strong>Strongly Agree (SA)</strong><br>You fully agree</td>
+    <td class="num">3</td><td><strong>Agree (A)</strong><br>You agree</td>
+    <td class="num">2</td><td><strong>Disagree (D)</strong><br>You disagree</td>
+    <td class="num">1</td><td><strong>Strongly Disagree (SD)</strong><br>You fully disagree</td>
+  </tr>
+</table>
+
+<!-- SECTION TEMPLATE -->
+<div class="section">
+  <div class="section-title">A. Functional Suitability <span class="note">— functions meet stated and implied needs</span></div>
+  <table class="q-table">
+    <thead><tr><th>#</th><th>Statement</th><th class="box">4</th><th class="box">3</th><th class="box">2</th><th class="box">1</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>The system provides all the functions I need to manage documents (upload, share, approve, release, archive).</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">2</td><td>The system performs its tasks correctly and produces accurate results (e.g., reference numbers, approval status).</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">3</td><td>The system's functions are appropriate for accomplishing my document management tasks.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">B. Performance Efficiency <span class="note">— performance relative to resources used</span></div>
+  <table class="q-table">
+    <thead><tr><th>#</th><th>Statement</th><th class="box">4</th><th class="box">3</th><th class="box">2</th><th class="box">1</th></tr></thead>
+    <tbody>
+      <tr><td class="num">4</td><td>The system responds quickly when I upload, search for, or open documents.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">5</td><td>The system runs smoothly without unnecessarily slowing down my device.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">6</td><td>The system handles many documents and users without noticeable performance problems.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">C. Compatibility <span class="note">— works with other systems and shares its environment</span></div>
+  <table class="q-table">
+    <thead><tr><th>#</th><th>Statement</th><th class="box">4</th><th class="box">3</th><th class="box">2</th><th class="box">1</th></tr></thead>
+    <tbody>
+      <tr><td class="num">7</td><td>The system works well alongside other applications I use (e.g., browser, email).</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">8</td><td>The system exchanges information properly with other services (e.g., email notifications).</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">D. Interaction Capability <span class="note">— formerly Usability: understandable, learnable, operable, engaging</span></div>
+  <table class="q-table">
+    <thead><tr><th>#</th><th>Statement</th><th class="box">4</th><th class="box">3</th><th class="box">2</th><th class="box">1</th></tr></thead>
+    <tbody>
+      <tr><td class="num">9</td><td>It is easy to tell that the system is suitable for my needs.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">10</td><td>I was able to learn how to use the system quickly.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">11</td><td>The system is easy to operate and navigate.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">12</td><td>The system helps me avoid and correct mistakes (e.g., confirmation dialogs before approving/rejecting).</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">13</td><td>The interface is visually pleasant and engaging to use.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">14</td><td>The system is usable by different types of users, including those with little technical background.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">15</td><td>Help, labels, and guidance are available when I need them.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">E. Reliability <span class="note">— performs its functions under specified conditions</span></div>
+  <table class="q-table">
+    <thead><tr><th>#</th><th>Statement</th><th class="box">4</th><th class="box">3</th><th class="box">2</th><th class="box">1</th></tr></thead>
+    <tbody>
+      <tr><td class="num">16</td><td>The system operates without frequent errors or crashes.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">17</td><td>The system is available whenever I need to use it.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">18</td><td>The system keeps working properly even when minor problems occur.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">19</td><td>The system recovers data and restores its state after an interruption or failure.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">F. Security <span class="note">— protects information and grants access appropriately</span></div>
+  <table class="q-table">
+    <thead><tr><th>#</th><th>Statement</th><th class="box">4</th><th class="box">3</th><th class="box">2</th><th class="box">1</th></tr></thead>
+    <tbody>
+      <tr><td class="num">20</td><td>The system keeps documents confidential — only authorized people can access them.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">21</td><td>The system protects documents from unauthorized changes.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">22</td><td>The system accurately records who performed each action (e.g., who approved or released a document).</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">23</td><td>The system properly verifies a user's identity before granting access.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">G. Maintainability <span class="note">— can be modified and improved effectively</span></div>
+  <table class="q-table">
+    <thead><tr><th>#</th><th>Statement</th><th class="box">4</th><th class="box">3</th><th class="box">2</th><th class="box">1</th></tr></thead>
+    <tbody>
+      <tr><td class="num">24</td><td>The system's features are well-organized and clearly separated.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">25</td><td>When something goes wrong, the problem is easy to identify (e.g., clear error messages).</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">26</td><td>Updates or changes to the system can be made without disrupting other parts.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">H. Flexibility <span class="note">— formerly Portability: adapts, scales, and transfers across environments</span></div>
+  <table class="q-table">
+    <thead><tr><th>#</th><th>Statement</th><th class="box">4</th><th class="box">3</th><th class="box">2</th><th class="box">1</th></tr></thead>
+    <tbody>
+      <tr><td class="num">27</td><td>The system adapts well to different devices and screen sizes (desktop, tablet, phone).</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">28</td><td>The system continues to perform well as the number of documents and users grows.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">29</td><td>The system is easy to access and set up.</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">I. Safety <span class="note">— new in ISO/IEC 25010:2023: avoids harm to people, data, or operations</span></div>
+  <table class="q-table">
+    <thead><tr><th>#</th><th>Statement</th><th class="box">4</th><th class="box">3</th><th class="box">2</th><th class="box">1</th></tr></thead>
+    <tbody>
+      <tr><td class="num">30</td><td>The system warns me before I perform risky or irreversible actions (e.g., deleting a document).</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+      <tr><td class="num">31</td><td>The system prevents actions that could cause data loss (e.g., released papers must be archived before they can be deleted).</td><td class="box"></td><td class="box"></td><td class="box"></td><td class="box"></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <h3 class="blk">Scoring &amp; Interpretation (4-Point Scale)</h3>
+  <table class="interp">
+    <thead><tr><th>Weighted Mean Range</th><th>Verbal Interpretation</th></tr></thead>
+    <tbody>
+      <tr><td>3.26 &ndash; 4.00</td><td>Strongly Agree (Excellent)</td></tr>
+      <tr><td>2.51 &ndash; 3.25</td><td>Agree (Good / Acceptable)</td></tr>
+      <tr><td>1.76 &ndash; 2.50</td><td>Disagree (Needs Improvement)</td></tr>
+      <tr><td>1.00 &ndash; 1.75</td><td>Strongly Disagree (Poor)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="comments">
+    <strong>Comments / Suggestions:</strong>
+    <div class="cl"></div>
+    <div class="cl"></div>
+    <div class="cl"></div>
+  </div>
+</div>
+
+</body>
+</html>

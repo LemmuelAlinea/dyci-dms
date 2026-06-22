@@ -103,6 +103,16 @@ export async function createCrossOfficeRequest(file: FileItem, targetOrgId: stri
   if (error) throw error;
 }
 
+export async function requestFolderApproval(folderId: string, assigneeId: string, message: string): Promise<void> {
+  const { error } = await supabase.rpc('request_folder_approval', { p_folder: folderId, p_message: message, p_assignee: assigneeId });
+  if (error) throw error;
+}
+
+export async function requestCrossOfficeFolderApproval(folderId: string, targetOrgId: string, message: string): Promise<void> {
+  const { error } = await supabase.rpc('request_cross_office_folder_approval', { p_folder: folderId, p_message: message, p_target_org: targetOrgId });
+  if (error) throw error;
+}
+
 /** Requests where the current user is the assignee of the active (pending) step. */
 export async function listToReview(userId: string): Promise<ApprovalRequest[]> {
   const { data: steps } = await supabase

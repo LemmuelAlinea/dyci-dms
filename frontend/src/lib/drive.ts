@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { kindFromFile, randomId } from './utils';
-import type { FileAttachment, FileComment, FileItem, FileVersion, Folder, NodeState, SharedFileItem } from './types';
+import type { FileAttachment, FileComment, FileItem, FileVersion, Folder, NodeState, SharedFileItem, SharedFolderItem } from './types';
 
 const BUCKET = 'documents';
 
@@ -270,6 +270,62 @@ export async function removeAttachment(att: FileAttachment): Promise<void> {
   await supabase.storage.from(BUCKET).remove([att.storage_path]);
   const { error } = await supabase.from('file_attachments').delete().eq('id', att.id);
   if (error) throw error;
+}
+
+// ── Folder sharing & browsing ────────────────────────────────────────────────
+export async function shareFolderWithMember(
+  orgId: string,
+  folderId: string,
+  targetUserId: string,
+  permission: 'view' | 'comment' | 'download' | 'edit',
+) {
+  const { error } = await supabase.from('shares').insert({
+    org_id: orgId,
+    target_type: 'folder',
+    target_id: folderId,
+    shared_by: (await supabase.auth.getUser()).data.user?.id,
+    shared_with_user_id: targetUserId,
+    permission,
+  });
+  if (error) throw error;
+}
+
+export async function listSharedFolders(userId: string): Promise<SharedFolderItem[]> {
+  const { data: shares, error: sErr } = await supabase
+    .from('shares')
+    .select('target_id, permission')
+    .eq('target_type', 'folder')
+    .eq('shared_with_user_id', userId);
+  if (sErr) throw sErr;
+  const rows = shares ?? [];
+  const ids = rows.map((s) => s.target_id);
+  if (!ids.length) return [];
+  const byId = new Map(rows.map((s) => [s.target_id, s]));
+  const { data, error } = await supabase.from('folders').select('*').in('id', ids).eq('state', 'active');
+  if (error) throw error;
+  return ((data as Folder[]) ?? []).map((f) => ({ ...f, _share: { permission: byId.get(f.id)!.permission } }));
+}
+
+export async function getFolder(folderId: string): Promise<Folder | null> {
+  const { data } = await supabase.from('folders').select('*').eq('id', folderId).maybeSingle();
+  return (data as Folder) ?? null;
+}
+
+/** Contents of a folder regardless of owner (RLS decides visibility). */
+export async function listFolderContents(folderId: string): Promise<{ folders: Folder[]; files: FileItem[] }> {
+  const [{ data: folders }, { data: files }] = await Promise.all([
+    supabase.from('folders').select('*').eq('parent_id', folderId).eq('state', 'active').order('name'),
+    supabase.from('files').select(`*, ${OWNER}, ${APPROVER}`).eq('folder_id', folderId).eq('state', 'active').order('updated_at', { ascending: false }),
+  ]);
+  return { folders: (folders as Folder[]) ?? [], files: (files as FileItem[]) ?? [] };
+}
+
+/** Best permission the current user has on a folder or any ancestor (null = none). */
+export async function folderSharePerm(folderId: string | null): Promise<string | null> {
+  if (!folderId) return null;
+  const { data, error } = await supabase.rpc('folder_share_perm', { p_folder: folderId });
+  if (error) throw error;
+  return (data as string) ?? null;
 }
 
 export async function signedUrlForAttachment(att: FileAttachment, download = false): Promise<string> {

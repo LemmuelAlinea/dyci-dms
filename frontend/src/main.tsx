@@ -15,6 +15,7 @@ import { AuthCallback } from '@/features/auth/AuthCallback';
 
 import { DrivePage } from '@/features/drive/DrivePage';
 import { FileDetailPage } from '@/features/drive/FileDetailPage';
+import { FolderBrowsePage } from '@/features/drive/FolderBrowsePage';
 import { SharedPage } from '@/features/shared/SharedPage';
 import { ReleasedPage } from '@/features/released/ReleasedPage';
 import { ApprovalsPage } from '@/features/approvals/ApprovalsPage';
@@ -66,6 +67,7 @@ const router = createBrowserRouter([
           { index: true, element: <Navigate to="/app/drive" replace /> },
           { path: 'drive', element: <DrivePage /> },
           { path: 'file/:id', element: <FileDetailPage /> },
+          { path: 'folder/:id', element: <FolderBrowsePage /> },
           { path: 'shared', element: <SharedPage /> },
           { path: 'released', element: <ReleasedPage /> },
           { path: 'approvals', element: <ApprovalsPage /> },

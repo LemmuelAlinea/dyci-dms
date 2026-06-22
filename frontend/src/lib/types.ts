@@ -56,6 +56,7 @@ export interface Folder {
   parent_id: string | null;
   name: string;
   state: NodeState;
+  status?: DocStatus;
   created_at: string;
   updated_at: string;
 }
@@ -130,7 +131,7 @@ export type StepStatus = 'waiting' | 'pending' | 'approved' | 'rejected' | 'skip
 export interface ApprovalRequest {
   id: string;
   org_id: string;
-  file_id: string;
+  file_id: string | null;
   document_type_id: string | null;
   version_no: number;
   requester_id: string;
@@ -139,6 +140,7 @@ export interface ApprovalRequest {
   message: string | null;
   created_at: string;
   target_org_id: string | null;
+  folder_id: string | null;
   files?: FileItem;
   requester?: Profile;
 }
@@ -192,6 +194,7 @@ export interface Share {
 }
 
 export type SharedFileItem = FileItem & { _share?: { permission: string } };
+export type SharedFolderItem = Folder & { _share?: { permission: string } };
 
 export interface FileComment {
   id: string;

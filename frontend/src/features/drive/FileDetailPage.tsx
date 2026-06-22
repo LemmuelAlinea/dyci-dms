@@ -19,7 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { addAttachment, addFileComment, listAttachments, listFileComments, listVersions, myShareForFile, removeAttachment, setFileState, signedUrlForAttachment, signedUrlForVersion, uploadNewVersion } from '@/lib/drive';
+import { addAttachment, addFileComment, folderSharePerm, listAttachments, listFileComments, listVersions, myShareForFile, removeAttachment, setFileState, signedUrlForAttachment, signedUrlForVersion, uploadNewVersion } from '@/lib/drive';
 import { api } from '@/lib/api';
 import { getDocumentType } from '@/lib/documentTypes';
 import { getLatestRequestForFile, getRequestSteps, releaseFile } from '@/lib/approvals';
@@ -82,6 +82,11 @@ export function FileDetailPage() {
     queryKey: ['myShare', id, userId],
     queryFn: () => myShareForFile(id!, userId!),
     enabled: !!id && !!userId && !isFileOwner,
+  });
+  const { data: folderPerm } = useQuery({
+    queryKey: ['folderPerm', file?.folder_id, userId],
+    queryFn: () => folderSharePerm(file!.folder_id),
+    enabled: !!file?.folder_id && !!userId && !isFileOwner,
   });
 
   const { data: attachments } = useQuery({ queryKey: ['attachments', id], queryFn: () => listAttachments(id!), enabled: !!id });
@@ -149,7 +154,7 @@ export function FileDetailPage() {
   }
 
   const isOwner = file.owner_id === userId;
-  const perm = isOwner ? 'owner' : (myShare?.permission ?? null);
+  const perm = isOwner ? 'owner' : (myShare?.permission ?? folderPerm ?? null);
   const canDownload = isOwner || perm === 'download' || perm === 'edit';
   const canUpload = (isOwner || perm === 'edit') && (file.status === 'draft' || file.status === 'rejected');
   const canComment = isOwner || perm === 'comment' || perm === 'edit';

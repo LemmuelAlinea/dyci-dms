@@ -6,11 +6,11 @@ import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import { Avatar } from '@/components/ui/Avatar';
 import { listMembers, shareFileWithMember } from '@/lib/org';
-import { approverChoices, createApprovalRequest, createCrossOfficeRequest, getApprovalPlan, listApproverOffices, type PlanStep } from '@/lib/approvals';
+import { approverChoices, createApprovalRequest, createCrossOfficeRequest, getApprovalPlan, listApproverOffices, requestCrossOfficeFolderApproval, requestFolderApproval, type PlanStep } from '@/lib/approvals';
 import { notifyUsers } from '@/lib/notify';
 import { api } from '@/lib/api';
-import { createFolder, renameFile } from '@/lib/drive';
-import { ROLE_LABEL, type FileItem } from '@/lib/types';
+import { createFolder, renameFile, shareFolderWithMember } from '@/lib/drive';
+import { ROLE_LABEL, type FileItem, type Folder } from '@/lib/types';
 import { useAuth } from '@/store/auth';
 
 export function NewFolderDialog({
@@ -82,8 +82,11 @@ export function RenameDialog({ open, onClose, file, onDone }: { open: boolean; o
   );
 }
 
-export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onClose: () => void; file: FileItem; orgId: string }) {
+export function ShareDialog({ open, onClose, file, folder, orgId }: { open: boolean; onClose: () => void; file?: FileItem; folder?: Folder; orgId: string }) {
   const userId = useAuth((s) => s.session?.user.id);
+  const isFolder = !!folder;
+  const targetName = folder ? folder.name : file!.name;
+  const targetId = folder ? folder.id : file!.id;
   const [tab, setTab] = useState<'members' | 'email'>('members');
   const [emails, setEmails] = useState('');
   const [message, setMessage] = useState('');
@@ -109,12 +112,13 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
     setBusy(true);
     try {
       for (const uid of selected)
-        await shareFileWithMember(orgId, file.id, uid, tier);
+        if (isFolder) await shareFolderWithMember(orgId, targetId, uid, tier);
+        else await shareFileWithMember(orgId, targetId, uid, tier);
       await notifyUsers([...selected], {
         type: 'share',
-        title: 'A file was shared with you',
-        body: file.name,
-        link: `/app/file/${file.id}`,
+        title: isFolder ? 'A folder was shared with you' : 'A file was shared with you',
+        body: targetName,
+        link: isFolder ? `/app/folder/${targetId}` : `/app/file/${targetId}`,
       });
       toast.success(`Shared with ${selected.size} member${selected.size > 1 ? 's' : ''}`);
       setSelected(new Set());
@@ -132,7 +136,7 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
     if (!list.length) return toast.error('Add at least one email');
     setBusy(true);
     try {
-      await api.shareToEmail({ fileIds: [file.id], toEmails: list, message, orgId });
+      await api.shareToEmail(isFolder ? { folderId: targetId, toEmails: list, message, orgId } : { fileIds: [targetId], toEmails: list, message, orgId });
       toast.success('Email sent with attachment');
       setEmails('');
       setMessage('');
@@ -145,7 +149,7 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={`Share "${file.name}"`}>
+    <Modal open={open} onClose={onClose} title={`Share "${targetName}"`}>
       <div className="mb-4 flex rounded-xl bg-slate-100 p-1 dark:bg-white/5">
         <button onClick={() => setTab('members')} className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition ${tab === 'members' ? 'bg-white text-navy-900 shadow-sm dark:bg-surface-dark-3 dark:text-white' : 'text-slate-500'}`}>
           <Users size={15} /> Office members
@@ -230,8 +234,10 @@ export function ShareDialog({ open, onClose, file, orgId }: { open: boolean; onC
   );
 }
 
-export function RequestApprovalDialog({ open, onClose, file, orgId, onDone }: { open: boolean; onClose: () => void; file: FileItem; orgId: string; onDone: () => void }) {
+export function RequestApprovalDialog({ open, onClose, file, folder, orgId, onDone }: { open: boolean; onClose: () => void; file?: FileItem; folder?: Folder; orgId: string; onDone: () => void }) {
   const userId = useAuth((s) => s.session?.user.id);
+  const isFolder = !!folder;
+  const targetName = folder ? folder.name : file!.name;
   const [picks, setPicks] = useState<Record<number, string>>({});
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -239,7 +245,7 @@ export function RequestApprovalDialog({ open, onClose, file, orgId, onDone }: { 
   const [targetOrg, setTargetOrg] = useState('');
 
   const officesQ = useQuery({ queryKey: ['approverOffices', orgId], queryFn: () => listApproverOffices(orgId), enabled: open && mode === 'cross' });
-  const planQ = useQuery({ queryKey: ['approvalPlan', file.id], queryFn: () => getApprovalPlan(file), enabled: open && mode === 'office' });
+  const planQ = useQuery({ queryKey: ['approvalPlan', file?.id], queryFn: () => getApprovalPlan(file!), enabled: open && mode === 'office' && !isFolder });
   const choicesQ = useQuery({ queryKey: ['approverChoices', orgId], queryFn: () => approverChoices(orgId, userId), enabled: open && mode === 'office' && (planQ.data?.length ?? 0) === 0 && !planQ.isLoading });
 
   const plan: PlanStep[] = planQ.data ?? [];
@@ -258,9 +264,27 @@ export function RequestApprovalDialog({ open, onClose, file, orgId, onDone }: { 
       if (!targetOrg) return toast.error('Select an office');
       setBusy(true);
       try {
-        await createCrossOfficeRequest(file, targetOrg, message);
+        if (isFolder) await requestCrossOfficeFolderApproval(folder!.id, targetOrg, message);
+        else await createCrossOfficeRequest(file!, targetOrg, message);
         toast.success('Approval requested');
         setTargetOrg('');
+        setMessage('');
+        onDone();
+        onClose();
+      } catch (e) {
+        toast.error((e as Error).message);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (isFolder) {
+      if (!picks[1]) return toast.error('Choose an approver');
+      setBusy(true);
+      try {
+        await requestFolderApproval(folder!.id, picks[1], message);
+        toast.success('Approval requested');
+        setPicks({});
         setMessage('');
         onDone();
         onClose();
@@ -282,7 +306,7 @@ export function RequestApprovalDialog({ open, onClose, file, orgId, onDone }: { 
     }
     setBusy(true);
     try {
-      await createApprovalRequest(file, assignments, message);
+      await createApprovalRequest(file!, assignments, message);
       toast.success('Approval requested');
       setPicks({});
       setMessage('');
@@ -302,7 +326,7 @@ export function RequestApprovalDialog({ open, onClose, file, orgId, onDone }: { 
       title="Request approval"
       footer={<><button className="btn-ghost" onClick={onClose}>Cancel</button><button className="btn-primary" onClick={submit} disabled={busy}>{busy ? <Spinner className="h-4 w-4" /> : 'Send request'}</button></>}
     >
-      <p className="mb-4 text-sm text-slate-500">Send <strong className="text-navy-700 dark:text-white">{file.name}</strong> (v{file.current_version}) for review.</p>
+      <p className="mb-4 text-sm text-slate-500">Send <strong className="text-navy-700 dark:text-white">{targetName}</strong>{file ? ` (v${file.current_version})` : ' (folder)'} for review.</p>
 
       <div className="mb-4 flex gap-2">
         <button type="button" onClick={() => setMode('office')} className={mode === 'office' ? 'btn-primary flex-1' : 'btn-outline flex-1'}>My office</button>
